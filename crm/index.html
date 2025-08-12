@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trang tổng quan CRM AI (HTML)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom styles to avoid layout shifts and improve UX */
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
+        .modal { display: none; }
+        .modal.active { display: flex; }
+        /* Simple loading spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border-left-color: #fff;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">Trang tổng quan CRM AI</h1>
+            <p class="text-gray-600 mt-2">Nâng cao hiệu suất với các tính năng phân tích, tóm tắt và soạn thảo thông minh.</p>
+        </header>
+
+        <!-- AI Query Section -->
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+            <div class="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                <input type="text" id="aiQueryInput" placeholder="Đặt câu hỏi về dữ liệu của bạn..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button id="aiQueryButton" class="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-blue-300 flex items-center justify-center space-x-2">
+                    <span id="aiQueryButtonText">Hỏi AI</span>
+                </button>
+            </div>
+            <div id="aiResponseContainer" class="hidden mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h3 class="font-bold text-blue-800 mb-2">Câu trả lời từ AI:</h3>
+                <p id="aiResponseText" class="text-gray-800 whitespace-pre-wrap"></p>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="bg-white p-4 sm:p-6 rounded-xl shadow-lg">
+            <div class="border-b border-gray-200 mb-4">
+                <nav id="tabs" class="-mb-px flex space-x-6" aria-label="Tabs">
+                    <button data-tab="dashboard" class="tab-button capitalize py-4 px-1 border-b-2 font-medium text-sm border-blue-500 text-blue-600">Tổng quan</button>
+                    <button data-tab="contacts" class="tab-button capitalize py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">contacts</button>
+                    <button data-tab="activities" class="tab-button capitalize py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">activities</button>
+                    <button data-tab="employees" class="tab-button capitalize py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">employees</button>
+                </nav>
+            </div>
+            <div id="mainContent" class="mt-6">
+                <!-- Content will be injected here by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Modal -->
+    <div id="emailModal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 justify-center items-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 id="emailModalTitle" class="text-xl font-bold text-gray-800">Soạn Email</h3>
+                <button id="closeEmailModal" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <div class="p-6">
+                 <div class="space-y-4">
+                    <div>
+                        <label for="emailGoal" class="block text-sm font-medium text-gray-700">Mục tiêu Email là gì?</label>
+                        <input type="text" id="emailGoal" placeholder="Ví dụ: hỏi thăm và đề nghị một cuộc họp vào tuần tới" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <button id="draftEmailButton" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 disabled:bg-indigo-300 flex items-center justify-center space-x-2">
+                        <span id="draftEmailButtonText">✨ Soạn thảo với AI</span>
+                    </button>
+                    <div id="draftedEmailContainer" class="hidden mt-4">
+                        <label class="block text-sm font-medium text-gray-700">Email đã soạn:</label>
+                        <textarea id="draftedEmailText" readonly rows="10" class="mt-1 block w-full p-3 font-mono text-sm bg-gray-50 border border-gray-300 rounded-md"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // --- Data ---
+    const contactsData = [
+        { id: 7, Name: "Amy Wyllie", Title: "Financial director", Company: "Smile Bros.", Email: "amy@smilebros.com", "Activities count": 4 },
+        { id: 4, Name: "Cindy Crowford", Title: "Head of Marketing", Company: "Jupiter", Email: "cindy@jupiter.com", "Activities count": 2 },
+        { id: 10, Name: "Gladys P. Burchfield", Title: "Sales director", Company: "Jupiter", Email: "gladys@jupiter.com", "Activities count": 1 },
+        { id: 1, Name: "John Tagliafero", Title: "CEO", Company: "Smile Bros.", Email: "john@smilebros.com", "Activities count": 5 },
+        { id: 3, Name: "Sara Winter", Title: "VP of Sales", Company: "Jupiter", Email: "sara@jupiter.com", "Activities count": 1 },
+    ];
+    const activitiesData = [
+        { id: 17, Name: "2024-12-11 - Amy Wyllie (Meeting)", Activity: "Meeting", Contact: "John Tagliafero,Amy Wyllie", Pipeline: "Website Redesign,Branding Workshop Facilitation", Date: "2024-12-11", Notes: "Discussing the details before sending the contract. Both parties agreed on the main terms. Follow up required by end of week to finalize the small details.", Employee: "Clayton Best,Jane Dradder" },
+        { id: 13, Name: "2024-09-11 - Amy Wyllie (Meeting)", Activity: "Meeting", Contact: "Amy Wyllie", Pipeline: "Social Media Marketing Campaign", Date: "2024-09-11", Notes: "- **Purpose:** Planning and coordination meeting for the \"\"Social Media Marketing Campaign\"\" project.\n- **Agenda:**\n  - Review campaign timeline and milestones.\n  - Assign tasks and responsibilities to team members.\n  - Discuss budget allocation and advertising strategies.\n  - Set goals and metrics for campaign success.", Employee: "Jonathan Castillo" },
+        { id: 12, Name: "2024-09-04 - Eugene Keith (Deadline)", Activity: "Deadline", Contact: "Eugene Keith", Pipeline: "Branding Workshop Facilitation", Date: "2024-09-04", Notes: "- **Purpose:** Reminder for upcoming deadline related to the \"\"Branding Workshop Facilitation\"\" project.\n- **Details:**\n  - Deadline for submitting workshop materials or finalizing workshop agenda.\n  - Instructions for completing required tasks or deliverables.", Employee: "Jane Dradder" },
+        { id: 6, Name: "2024-07-11 - Cindy Crowford (Email)", Activity: "Email", Contact: "Cindy Crowford", Pipeline: "Designing a new Landing Page", Date: "2024-07-11", Notes: "Sent an email to Cindy with the latest mockups for the landing page. Awaiting feedback. She mentioned she will get back to us by Friday.", Employee: "Jane Dradder" },
+        { id: 1, Name: "2024-07-04 - Cindy Crowford (Lunch)", Activity: "Lunch", Contact: "Cindy Crowford", Pipeline: "Designing a new Landing Page", Date: "2024-07-04", Notes: "Informal discussion about the project. Cindy is happy with the progress and suggested a few minor tweaks to the color palette.", Employee: "Jane Dradder" },
+        { id: 2, Name: "2024-06-16 - Sara Winter (Email)", Activity: "Email", Contact: "Sara Winter", Pipeline: "Photo Shooting for product catalog", Date: "2024-06-16", Notes: "Follow up email sent to Sara. No response yet. Will try calling next week if no reply.", Employee: "Jonathan Castillo" },
+    ];
+    const employeesData = [
+        { id: 1, Name: "Clayton Best", "Job role": "Account manager", "Active pipelines count": 1 },
+        { id: 3, Name: "Jane Dradder", "Job role": "Executive manager", "Active pipelines count": 3 },
+        { id: 2, Name: "Jonathan Castillo", "Job role": "Account manager", "Active pipelines count": 2 },
+    ];
+
+    // --- State Variables ---
+    let activeTab = 'dashboard';
+    let emailTarget = null;
+    let chartInstances = {};
+
+    // --- DOM Elements ---
+    const mainContent = document.getElementById('mainContent');
+    const tabsContainer = document.getElementById('tabs');
+    const aiQueryInput = document.getElementById('aiQueryInput');
+    const aiQueryButton = document.getElementById('aiQueryButton');
+    const aiQueryButtonText = document.getElementById('aiQueryButtonText');
+    const aiResponseContainer = document.getElementById('aiResponseContainer');
+    const aiResponseText = document.getElementById('aiResponseText');
+    
+    // Modal elements
+    const emailModal = document.getElementById('emailModal');
+    const emailModalTitle = document.getElementById('emailModalTitle');
+    const closeEmailModalButton = document.getElementById('closeEmailModal');
+    const emailGoalInput = document.getElementById('emailGoal');
+    const draftEmailButton = document.getElementById('draftEmailButton');
+    const draftEmailButtonText = document.getElementById('draftEmailButtonText');
+    const draftedEmailContainer = document.getElementById('draftedEmailContainer');
+    const draftedEmailText = document.getElementById('draftedEmailText');
+
+    // --- Helper Functions ---
+    const toCsvString = (data) => {
+        if (!data || data.length === 0) return '';
+        const headers = Object.keys(data[0]);
+        const headerString = headers.join(',');
+        const rows = data.map(row => headers.map(header => JSON.stringify(row[header])).join(','));
+        return [headerString, ...rows].join('\n');
+    };
+
+    const callGemini = async (prompt) => {
+        const apiKey = ""; // Injected by environment
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }] })
+            });
+            if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+            const result = await response.json();
+            return result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+        } catch (error) {
+            console.error("Error calling Gemini API:", error);
+            return `Đã có lỗi xảy ra: ${error.message}`;
+        }
+    };
+    
+    const showLoading = (button, buttonTextElement) => {
+        button.disabled = true;
+        buttonTextElement.innerHTML = `<div class="spinner"></div>`;
+    };
+
+    const hideLoading = (button, buttonTextElement, originalText) => {
+        button.disabled = false;
+        buttonTextElement.innerText = originalText;
+    };
+
+
+    // --- Render Functions ---
+    const destroyCharts = () => {
+        Object.values(chartInstances).forEach(chart => chart.destroy());
+        chartInstances = {};
+    };
+
+    const renderDashboard = () => {
+        destroyCharts();
+        mainContent.innerHTML = `
+            <div class="space-y-8">
+                <!-- KPIs -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-lg flex items-center space-x-4"><div class="bg-blue-100 p-3 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg></div><div><p class="text-gray-500 text-sm font-medium">Tổng số liên hệ</p><p class="text-2xl font-bold text-gray-800">${contactsData.length}</p></div></div>
+                    <div class="bg-white p-6 rounded-xl shadow-lg flex items-center space-x-4"><div class="bg-blue-100 p-3 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg></div><div><p class="text-gray-500 text-sm font-medium">Tổng số hoạt động</p><p class="text-2xl font-bold text-gray-800">${activitiesData.length}</p></div></div>
+                    <div class="bg-white p-6 rounded-xl shadow-lg flex items-center space-x-4"><div class="bg-blue-100 p-3 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21v-1a6 6 0 00-5.176-5.973" /></svg></div><div><p class="text-gray-500 text-sm font-medium">Tổng số nhân viên</p><p class="text-2xl font-bold text-gray-800">${employeesData.length}</p></div></div>
+                </div>
+                 <!-- AI Insights -->
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-lg text-gray-700 mb-4">Phân tích & Đề xuất từ AI</h3>
+                        <button id="getInsightsButton" class="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 disabled:bg-purple-300 text-sm flex items-center justify-center space-x-2">
+                            <span id="getInsightsButtonText">✨ Nhận phân tích</span>
+                        </button>
+                    </div>
+                    <div id="insightsContainer" class="hidden mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg text-gray-800 whitespace-pre-wrap"></div>
+                </div>
+                <!-- Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    <div class="lg:col-span-3 bg-white p-6 rounded-xl shadow-lg">
+                        <h3 class="font-bold text-lg text-gray-700 mb-4">Số hoạt động theo liên hệ</h3>
+                        <div class="chart-container"><canvas id="activitiesPerContactChart"></canvas></div>
+                    </div>
+                    <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                        <h3 class="font-bold text-lg text-gray-700 mb-4">Phân loại hoạt động</h3>
+                        <div class="chart-container"><canvas id="activityTypeChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        renderCharts();
+        // Add event listener for the new button
+        document.getElementById('getInsightsButton').addEventListener('click', handleGetInsights);
+    };
+    
+    const renderCharts = () => {
+        // Chart 1: Activities per Contact
+        const activitiesPerContactCtx = document.getElementById('activitiesPerContactChart').getContext('2d');
+        chartInstances.activitiesPerContact = new Chart(activitiesPerContactCtx, {
+            type: 'bar',
+            data: {
+                labels: contactsData.map(c => c.Name),
+                datasets: [{
+                    label: 'Số hoạt động',
+                    data: contactsData.map(c => c['Activities count']),
+                    backgroundColor: '#3B82F6',
+                    borderColor: '#3B82F6',
+                    borderWidth: 1
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, allowDecimals: false } } }
+        });
+
+        // Chart 2: Activity Type
+        const activityTypeCounts = activitiesData.reduce((acc, curr) => {
+            acc[curr.Activity] = (acc[curr.Activity] || 0) + 1;
+            return acc;
+        }, {});
+        const activityTypeCtx = document.getElementById('activityTypeChart').getContext('2d');
+        chartInstances.activityType = new Chart(activityTypeCtx, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(activityTypeCounts),
+                datasets: [{
+                    data: Object.values(activityTypeCounts),
+                    backgroundColor: ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'],
+                    hoverOffset: 4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    };
+
+    const renderTable = (data, type) => {
+        destroyCharts();
+        if (!data || data.length === 0) {
+            mainContent.innerHTML = `<p class="text-gray-500">Không có dữ liệu.</p>`;
+            return;
+        }
+        const headers = Object.keys(data[0]);
+        const headerHtml = headers.map(h => `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${h}</th>`).join('');
+        const rowsHtml = data.map(row => {
+            const cellsHtml = headers.map(h => `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${String(row[h])}</td>`).join('');
+            let actionButton = '';
+            if (type === 'contacts') {
+                actionButton = `<button data-action="email" data-id="${row.id}" class="text-indigo-600 hover:text-indigo-900">✨ Soạn Email</button>`;
+            } else if (type === 'activities') {
+                actionButton = `<button data-action="summarize" data-id="${row.id}" class="text-indigo-600 hover:text-indigo-900">✨ Tóm tắt</button>`;
+            }
+            return `<tr class="hover:bg-gray-50">${cellsHtml}<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${actionButton}</td></tr>`;
+        }).join('');
+
+        mainContent.innerHTML = `
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                    <thead class="bg-gray-50"><tr>${headerHtml}<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th></tr></thead>
+                    <tbody class="divide-y divide-gray-200">${rowsHtml}</tbody>
+                </table>
+            </div>
+        `;
+    };
+
+    const updateView = () => {
+        // Update tab styles
+        document.querySelectorAll('.tab-button').forEach(button => {
+            if (button.dataset.tab === activeTab) {
+                button.classList.add('border-blue-500', 'text-blue-600');
+                button.classList.remove('border-transparent', 'text-gray-500');
+            } else {
+                button.classList.remove('border-blue-500', 'text-blue-600');
+                button.classList.add('border-transparent', 'text-gray-500');
+            }
+        });
+
+        // Update content
+        switch (activeTab) {
+            case 'dashboard':
+                renderDashboard();
+                break;
+            case 'contacts':
+                renderTable(contactsData, 'contacts');
+                break;
+            case 'activities':
+                renderTable(activitiesData, 'activities');
+                break;
+            case 'employees':
+                renderTable(employeesData, 'employees');
+                break;
+        }
+    };
+
+    // --- Event Handlers ---
+    const handleQuery = async () => {
+        const query = aiQueryInput.value;
+        if (!query.trim()) return;
+        
+        showLoading(aiQueryButton, aiQueryButtonText);
+        aiResponseContainer.classList.add('hidden');
+
+        const prompt = `Bạn là một trợ lý CRM. Dựa vào dữ liệu sau:\n\nContacts:\n${toCsvString(contactsData)}\n\nActivities:\n${toCsvString(activitiesData)}\n\nEmployees:\n${toCsvString(employeesData)}\n\nHãy trả lời câu hỏi sau bằng tiếng Việt: "${query}"`;
+        const result = await callGemini(prompt);
+        
+        aiResponseText.innerText = result || "Không nhận được phản hồi từ AI.";
+        aiResponseContainer.classList.remove('hidden');
+        hideLoading(aiQueryButton, aiQueryButtonText, 'Hỏi AI');
+    };
+    
+    const handleGetInsights = async () => {
+        const button = document.getElementById('getInsightsButton');
+        const buttonText = document.getElementById('getInsightsButtonText');
+        const container = document.getElementById('insightsContainer');
+        
+        showLoading(button, buttonText);
+        container.classList.add('hidden');
+        
+        const prompt = `Là một nhà phân tích kinh doanh, hãy xem xét dữ liệu CRM sau:\n\nContacts:\n${toCsvString(contactsData)}\n\nActivities:\n${toCsvString(activitiesData)}\n\nEmployees:\n${toCsvString(employeesData)}\n\nCung cấp một bản tóm tắt phân tích bằng tiếng Việt. Tập trung vào: \n1. **Cơ hội:** Khách hàng hoặc pipeline nào tiềm năng nhất? \n2. **Rủi ro:** Có điểm nào đáng lo ngại không (ví dụ: khách hàng lâu không tương tác, nhân viên quá tải)? \n3. **Đề xuất:** Gợi ý 1-2 hành động cụ thể nên làm tiếp theo.`;
+        const result = await callGemini(prompt);
+        
+        container.innerText = result || "Không thể tạo phân tích.";
+        container.classList.remove('hidden');
+        hideLoading(button, buttonText, '✨ Nhận phân tích');
+    };
+    
+    const handleDraftEmail = async () => {
+        const goal = emailGoalInput.value;
+        if (!goal.trim() || !emailTarget) return;
+        
+        showLoading(draftEmailButton, draftEmailButtonText);
+        draftedEmailContainer.classList.add('hidden');
+
+        const prompt = `Bạn là một trợ lý kinh doanh chuyên nghiệp. Hãy soạn một email bằng tiếng Việt gửi tới ${emailTarget.Name} từ công ty ${emailTarget.Company}. Nội dung email cần đạt được mục tiêu sau: "${goal}". Email cần chuyên nghiệp, lịch sự và súc tích.`;
+        const result = await callGemini(prompt);
+        
+        draftedEmailText.value = result || "Không thể soạn email.";
+        draftedEmailContainer.classList.remove('hidden');
+        hideLoading(draftEmailButton, draftEmailButtonText, '✨ Soạn thảo với AI');
+    };
+
+    // --- Initial Setup ---
+    tabsContainer.addEventListener('click', (e) => {
+        if (e.target.matches('.tab-button')) {
+            activeTab = e.target.dataset.tab;
+            updateView();
+        }
+    });
+
+    aiQueryButton.addEventListener('click', handleQuery);
+    aiQueryInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleQuery();
+    });
+    
+    mainContent.addEventListener('click', (e) => {
+        if (e.target.dataset.action === 'email') {
+            const contactId = parseInt(e.target.dataset.id, 10);
+            emailTarget = contactsData.find(c => c.id === contactId);
+            if (emailTarget) {
+                emailModalTitle.innerText = `Soạn Email cho ${emailTarget.Name}`;
+                emailGoalInput.value = '';
+                draftedEmailContainer.classList.add('hidden');
+                draftedEmailText.value = '';
+                emailModal.classList.add('active');
+            }
+        } else if (e.target.dataset.action === 'summarize') {
+            const activityId = parseInt(e.target.dataset.id, 10);
+            const activity = activitiesData.find(a => a.id === activityId);
+            if (activity) {
+                 alert("Đang tóm tắt... Tính năng này sẽ sớm được cập nhật!");
+                 // const prompt = `Tóm tắt ghi chú hoạt động sau đây thành 1-2 câu chính bằng tiếng Việt:\n\n"${activity.Notes}"`;
+                 // const summary = await callGemini(prompt);
+                 // alert(`Tóm tắt:\n\n${summary}`);
+            }
+        }
+    });
+    
+    closeEmailModalButton.addEventListener('click', () => emailModal.classList.remove('active'));
+    draftEmailButton.addEventListener('click', handleDraftEmail);
+
+    // Initial render
+    updateView();
+});
+</script>
+
+</body>
+</html>
