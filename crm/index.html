@@ -98,6 +98,12 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    
+    // =================================================================
+    // API KEY CỦA BẠN ĐÃ ĐƯỢC CẬP NHẬT VÀO ĐÂY
+    // =================================================================
+    const YOUR_API_KEY = "AIzaSyDOYSA7urKkHiKfwsIRkYG4PXvQiTcxDH0";
+    // =================================================================
 
     // --- Data ---
     const contactsData = [
@@ -155,15 +161,21 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const callGemini = async (prompt) => {
-        const apiKey = ""; // Injected by environment
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+        if (YOUR_API_KEY === "PASTE_YOUR_GEMINI_API_KEY_HERE") {
+            return "Lỗi: Vui lòng cung cấp API Key của bạn trong file HTML.";
+        }
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${YOUR_API_KEY}`;
         try {
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }] })
             });
-            if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+            if (!response.ok) {
+                 const errorData = await response.json();
+                 console.error("API Error Response:", errorData);
+                 throw new Error(`API call failed: ${response.status} - ${errorData.error.message}`);
+            }
             const result = await response.json();
             return result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
         } catch (error) {
