@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Bánh Đà Tăng Trưởng Cho Nhà Rang Xay Cà Phê</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #f8f9fa;
+            color: #343a40;
+        }
+        .tab-active {
+            border-bottom: 3px solid #0a68ff;
+            color: #004ec2;
+            font-weight: 700;
+            background-color: #e6f0ff;
+        }
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+        .card {
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(149, 157, 165, 0.1);
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+        .interactive-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 32px rgba(149, 157, 165, 0.15);
+            cursor: pointer;
+        }
+        .section-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #004ec2;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .icon {
+            font-size: 2.5rem;
+            color: #0a68ff;
+        }
+        .modal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); animation: fadeIn 0.3s;
+        }
+        .modal-content {
+            background-color: #fefefe; margin: 5% auto; padding: 2rem; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: slideIn 0.4s;
+        }
+        .modal-close { color: #aaa; float: right; font-size: 28px; font-weight: bold; transition: color 0.3s ease; }
+        .modal-close:hover, .modal-close:focus { color: black; text-decoration: none; cursor: pointer; }
+        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+        @keyframes slideIn { from {transform: translateY(-50px);} to {transform: translateY(0);} }
+        
+        /* Flywheel Diagram */
+        .flywheel-container { position: relative; width: 400px; height: 400px; margin: 2rem auto; }
+        .flywheel-loop { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.4s ease; }
+        .flywheel-loop:hover { transform: scale(1.05); }
+        .loop1 { width: 400px; height: 400px; border: 4px dashed #0a68ff; }
+        .loop2 { width: 280px; height: 280px; border: 4px dashed #13a452; top: 60px; left: 60px; }
+        .loop3 { width: 160px; height: 160px; border: 4px dashed #ff6b00; top: 120px; left: 120px; }
+        .flywheel-text { position: absolute; background: white; padding: 5px 10px; border-radius: 8px; font-weight: 600; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .text1 { color: #004ec2; top: -20px; left: 50%; transform: translateX(-50%); }
+        .text2 { color: #0e7a3d; bottom: 100px; right: -40px; }
+        .text3 { color: #b34d00; bottom: 165px; left: -40px; }
+        .flywheel-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #333; font-weight: 800; }
+
+        /* Kanban Board */
+        .kanban-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+        .kanban-column { background-color: #f1f5f9; padding: 1rem; border-radius: 12px; }
+        .kanban-title { font-weight: 700; margin-bottom: 1rem; }
+        .kanban-card { background-color: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 1rem; cursor: pointer; }
+        .kanban-card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <div class="max-w-screen-xl mx-auto">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-[#004ec2]">The Growth Flywheel Dashboard</h1>
+            <p class="text-xl mt-3 text-gray-500">Mô hình Tăng trưởng Hợp nhất cho Nhà rang xay Địa phương</p>
+        </header>
+
+        <div class="mb-8 bg-white rounded-xl shadow-sm p-2">
+            <nav class="flex flex-wrap justify-center" id="tab-nav">
+                <button class="tab-btn tab-active py-3 px-5 rounded-lg flex items-center gap-2" data-tab="flywheel"><i class="ph-bold ph-gear-six"></i>Bánh Đà Tăng Trưởng</button>
+                <button class="tab-btn py-3 px-5 rounded-lg flex items-center gap-2" data-tab="operation"><i class="ph-bold ph-atom"></i>Vòng Lặp Tự Vận Hành</button>
+                <button class="tab-btn py-3 px-5 rounded-lg flex items-center gap-2" data-tab="innovation"><i class="ph-bold ph-rocket-launch"></i>Vòng Lặp Cải Tiến</button>
+                <button class="tab-btn py-3 px-5 rounded-lg flex items-center gap-2" data-tab="replication"><i class="ph-bold ph-copy"></i>Vòng Lặp Nhân Rộng</button>
+                <button class="tab-btn py-3 px-5 rounded-lg flex items-center gap-2" data-tab="ai-assistant"><i class="ph-bold ph-brain"></i>Trợ Lý AI</button>
+            </nav>
+        </div>
+
+        <main id="tab-content">
+            <!-- Flywheel Overview -->
+            <div id="flywheel" class="tab-pane active">
+                <h2 class="section-title">Tổng Quan Bánh Đà Tăng Trưởng</h2>
+                <div class="card p-8">
+                    <div class="flywheel-container">
+                        <div class="flywheel-loop loop1">
+                            <div class="flywheel-text text1">Vòng Lặp Tự Vận Hành</div>
+                        </div>
+                        <div class="flywheel-loop loop2">
+                             <div class="flywheel-text text2">Vòng Lặp Cải Tiến</div>
+                        </div>
+                        <div class="flywheel-loop loop3">
+                             <div class="flywheel-text text3">Vòng Lặp Nhân Rộng</div>
+                        </div>
+                        <div class="flywheel-center">
+                            <i class="ph-bold ph-fire text-5xl text-orange-500"></i>
+                            <h3 class="text-xl">TĂNG TRƯỞNG</h3>
+                        </div>
+                    </div>
+                     <div class="text-center max-w-2xl mx-auto mt-8">
+                        <p>Mô hình Bánh đà Tăng trưởng hợp nhất 3 vòng lặp: <strong>Tự Vận Hành</strong> tạo ra năng lượng ban đầu, <strong>Cải Tiến</strong> tăng tốc cho bánh đà, và <strong>Nhân Rộng</strong> khuếch đại sức mạnh của nó. Mỗi vòng lặp đều nuôi dưỡng và được nuôi dưỡng bởi các vòng lặp khác, tạo ra một chu kỳ tăng trưởng bền vững và ngày càng mạnh mẽ.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Self-Operating Loop -->
+            <div id="operation" class="tab-pane hidden">
+                <h2 class="section-title">Vòng Lặp Tự Vận Hành: Động Cơ Cốt Lõi</h2>
+                <p class="text-center max-w-3xl mx-auto mb-8">Đây là vòng lặp tạo ra giá trị cơ bản và sự hài lòng của khách hàng. Mỗi bước tối ưu hóa sẽ giảm ma sát và tăng tốc độ quay, tạo ra nhiều năng lượng hơn cho các vòng lặp khác.</p>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="card interactive-card p-5 text-center" data-title="1. Sản Phẩm Xuất Sắc (Excellent Product)" data-content="<strong>Mục tiêu:</strong> Cung cấp cà phê rang tươi, chất lượng cao và ổn định. Đây là điểm khởi đầu của mọi sự hài lòng.<br><strong>Hành động chính:</strong><br>- <i>Sourcing Thông Minh:</i> Xây dựng quan hệ trực tiếp với nông dân hoặc hợp tác xã uy tín tại các vùng trồng trọng điểm (Cầu Đất, Sơn La).<br>- <i>Hồ Sơ Rang Nhất Quán:</i> Sử dụng phần mềm (Artisan, Cropster) để ghi lại và lặp lại các mẻ rang thành công.<br>- <i>Quy Trình Cupping Nghiêm Ngặt:</i> Thử nếm mọi mẻ rang sau 24h, chỉ bán sản phẩm đạt tiêu chuẩn (trên 82 điểm SCA).<br><strong>KPIs:</strong> Điểm cupping trung bình, tỷ lệ mẻ rang hỏng, chi phí hạt xanh (green bean cost).">
+                        <i class="ph-bold ph-coffee-bean icon mb-2"></i><h4 class="font-bold text-lg">Sản Phẩm Xuất Sắc</h4>
+                    </div>
+                    <div class="card interactive-card p-5 text-center" data-title="2. Trải Nghiệm Khách Hàng Vượt Trội (Superior Customer Experience)" data-content="<strong>Mục tiêu:</strong> Biến việc mua hàng thành một trải nghiệm thú vị và giàu thông tin.<br><strong>Hành động chính:</strong><br>- <i>Bao Bì 'Biết Nói':</i> Cung cấp đầy đủ thông tin (ngày rang, vùng trồng, sơ chế, tasting notes, công thức pha).<br>- <i>Tư Vấn Chuyên Sâu:</i> Đội ngũ bán hàng/online phải có khả năng tư vấn cho khách hàng loại cà phê phù hợp với dụng cụ và khẩu vị của họ.<br>- <i>Giao Hàng Nhanh Chóng:</i> Tối ưu hóa quy trình đóng gói và vận chuyển để cà phê đến tay khách hàng nhanh nhất sau khi rang.<br><strong>KPIs:</strong> Thời gian từ đặt hàng đến giao hàng, điểm đánh giá dịch vụ, số câu hỏi tư vấn được giải quyết.">
+                        <i class="ph-bold ph-star icon mb-2"></i><h4 class="font-bold text-lg">Trải Nghiệm Vượt Trội</h4>
+                    </div>
+                    <div class="card interactive-card p-5 text-center" data-title="3. Tạo Ra Người Hâm Mộ (Fan Creation)" data-content="<strong>Mục tiêu:</strong> Chuyển đổi khách hàng hài lòng thành những người ủng hộ thương hiệu.<br><strong>Hành động chính:</strong><br>- <i>Chương Trình Khách Hàng Thân Thiết:</i> Tích điểm, giảm giá cho lần mua tiếp theo.<br>- <i>Nội Dung Giáo Dục:</i> Tạo blog, video hướng dẫn pha chế, giải thích về các loại hạt. Giúp khách hàng 'thông minh' hơn.<br>- <i>Tương Tác Cộng Đồng:</i> Chủ động trả lời bình luận, tổ chức các buổi Q&A online.<br><strong>KPIs:</strong> Tỷ lệ khách hàng quay lại (retention rate), số lượng review/đánh giá 5 sao, mức độ tương tác trên mạng xã hội.">
+                        <i class="ph-bold ph-users-three icon mb-2"></i><h4 class="font-bold text-lg">Tạo Ra Người Hâm Mộ</h4>
+                    </div>
+                    <div class="card interactive-card p-5 text-center" data-title="4. Tái Đầu Tư Thông Minh (Smart Reinvestment)" data-content="<strong>Mục tiêu:</strong> Sử dụng dữ liệu và lợi nhuận từ vòng lặp để làm cho sản phẩm và trải nghiệm tốt hơn nữa.<br><strong>Hành động chính:</strong><br>- <i>Phân Tích Dữ Liệu Bán Hàng:</i> Loại cà phê nào bán chạy nhất? Khách hàng thường mua kèm gì? Phản hồi của họ là gì?<br>- <i>Đầu Tư Vào Chất Lượng:</i> Dùng lợi nhuận để mua các lô hạt chất lượng cao hơn (micro-lot), hoặc đầu tư vào thiết bị rang/xay tốt hơn.<br>- <i>Tối Ưu Hóa Quy Trình:</i> Dựa trên feedback để cải thiện quy trình đóng gói, giao hàng.<br><strong>KPIs:</strong> Lợi nhuận ròng, chi phí thu hút khách hàng mới (CAC), giá trị vòng đời khách hàng (LTV).">
+                        <i class="ph-bold ph-chart-line-up icon mb-2"></i><h4 class="font-bold text-lg">Tái Đầu Tư Thông Minh</h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Innovation Loop -->
+            <div id="innovation" class="tab-pane hidden">
+                <h2 class="section-title">Vòng Lặp Cải Tiến: Cỗ Máy R&D</h2>
+                <p class="text-center max-w-3xl mx-auto mb-8">Thị trường không đứng yên. Vòng lặp này đảm bảo thương hiệu của bạn luôn mới mẻ, thú vị và dẫn đầu xu hướng, tạo ra những sản phẩm 'ngôi sao' thu hút sự chú ý và khách hàng mới.</p>
+                <div class="kanban-board">
+                    <div class="kanban-column bg-blue-100">
+                        <h3 class="kanban-title text-blue-800">Ý Tưởng (Backlog)</h3>
+                        <div class="kanban-card interactive-card" data-title="Ý tưởng: Cà phê lên men kỵ khí (Anaerobic)" data-content="Nghiên cứu và thử nghiệm các lô cà phê được chế biến theo phương pháp lên men kỵ khí để tạo ra hương vị độc đáo như rượu rum, trái cây nhiệt đới. Đây là xu hướng đang lên trong giới cà phê đặc sản.">Cà phê lên men kỵ khí</div>
+                        <div class="kanban-card interactive-card" data-title="Ý tưởng: Dòng Cold Brew đậm đặc" data-content="Phát triển một dòng sản phẩm cold brew đậm đặc đóng chai, tiện lợi cho khách hàng văn phòng hoặc những người không có thời gian pha chế.">Cold Brew đậm đặc</div>
+                    </div>
+                    <div class="kanban-column bg-yellow-100">
+                        <h3 class="kanban-title text-yellow-800">Nghiên Cứu & Phát Triển (R&D)</h3>
+                         <div class="kanban-card interactive-card" data-title="R&D: Tasting Box theo chủ đề" data-content="Thiết kế các hộp 'Tasting Box' gồm 3-4 mẫu cà phê 50g theo các chủ đề khác nhau: 'Khám phá Arabica Việt Nam', 'Hành trình đến Châu Phi', 'So sánh các phương pháp sơ chế'.">Tasting Box theo chủ đề</div>
+                    </div>
+                     <div class="kanban-column bg-purple-100">
+                        <h3 class="kanban-title text-purple-800">Thử Nghiệm (Testing)</h3>
+                        <div class="kanban-card interactive-card" data-title="Testing: Hạt Gesha Panama phiên bản giới hạn" data-content="Nhập một lô nhỏ hạt Gesha từ Panama, một trong những giống cà phê đắt và được săn lùng nhất thế giới. Rang và bán dưới dạng phiên bản giới hạn, số lượng cực ít để tạo hiệu ứng 'FOMO' và khẳng định đẳng cấp thương hiệu.">Gesha Panama (Limited)</div>
+                    </div>
+                    <div class="kanban-column bg-green-100">
+                        <h3 class="kanban-title text-green-800">Đã Ra Mắt (Launched)</h3>
+                        <div class="kanban-card interactive-card" data-title="Launched: Dòng 'Aromatico' rang Fast & Light" data-content="Dòng sản phẩm tập trung vào việc tối đa hóa hương thơm, sử dụng profile rang nhanh và nhạt để làm nổi bật các nốt hương hoa, trà. Sản phẩm đã nhận được phản hồi tích cực và được đưa vào danh mục sản phẩm chủ lực.">Dòng 'Aromatico'</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Replication Loop -->
+            <div id="replication" class="tab-pane hidden">
+                <h2 class="section-title">Vòng Lặp Nhân Rộng: Khuếch Đại Thành Công</h2>
+                <p class="text-center max-w-3xl mx-auto mb-8">Khi đã có một mô hình kinh doanh thành công, vòng lặp này tập trung vào việc sao chép và mở rộng quy mô một cách bài bản để chiếm lĩnh thị trường lớn hơn.</p>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="card p-6">
+                        <h3 class="font-bold text-xl mb-3 text-center">Mô Hình 1: Cung Cấp Sỉ (B2B)</h3>
+                        <ul class="space-y-3 list-disc list-inside">
+                            <li class="interactive-card" data-title="Bước 1: Xây dựng Gói B2B" data-content="Thiết kế các gói sản phẩm dành riêng cho quán cà phê, văn phòng, khách sạn. Ví dụ: Gói 'Signature Blend' với giá cạnh tranh, Gói 'Single Origin Of The Month' cho các quán specialty, Gói 'Office Coffee Solution' kèm máy cho thuê.">Xây dựng Gói sản phẩm B2B.</li>
+                            <li class="interactive-card" data-title="Bước 2: Hỗ trợ & Đào tạo" data-content="Không chỉ bán hạt, hãy bán giải pháp. Cung cấp dịch vụ đào tạo barista cơ bản cho nhân viên của quán, hỗ trợ 'dial-in' (căn chỉnh) máy xay và máy pha để đảm bảo chất lượng đầu ra.">Cung cấp dịch vụ hỗ trợ và đào tạo.</li>
+                            <li class="interactive-card" data-title="Bước 3: Xây dựng Kênh Phân phối" data-content="Tuyển dụng đội ngũ sale B2B hoặc hợp tác với các nhà phân phối nguyên liệu F&B để tiếp cận tệp khách hàng doanh nghiệp.">Xây dựng kênh phân phối.</li>
+                        </ul>
+                    </div>
+                    <div class="card p-6">
+                        <h3 class="font-bold text-xl mb-3 text-center">Mô Hình 2: Mở Chi Nhánh Mới</h3>
+                        <ul class="space-y-3 list-disc list-inside">
+                             <li class="interactive-card" data-title="Bước 1: Chuẩn hóa Quy trình (SOP)" data-content="Xây dựng một bộ 'Playbook' chi tiết, ghi lại tất cả các quy trình vận hành từ rang xay, pha chế, phục vụ khách hàng, quản lý kho, marketing tại điểm bán. Đây là tài liệu cốt lõi để nhân bản.">Chuẩn hóa toàn bộ quy trình vận hành (SOP).</li>
+                             <li class="interactive-card" data-title="Bước 2: Phân tích & Lựa chọn Địa điểm" data-content="Sử dụng dữ liệu khách hàng online để xác định các khu vực có nhiều đơn hàng nhất. Phân tích nhân khẩu học, mật độ dân cư, đối thủ cạnh tranh tại các địa điểm tiềm năng.">Phân tích dữ liệu để chọn địa điểm tối ưu.</li>
+                             <li class="interactive-card" data-title="Bước 3: Xây dựng Đội ngũ Kế thừa" data-content="Xây dựng một lộ trình phát triển nhân sự từ cửa hàng gốc. Các vị trí quản lý, trưởng ca tại chi nhánh mới nên được đề bạt từ những nhân viên xuất sắc, đã thấm nhuần văn hóa công ty.">Xây dựng đội ngũ nhân sự kế thừa.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Assistant -->
+            <div id="ai-assistant" class="tab-pane hidden">
+                <h2 class="section-title">Trợ Lý AI Phân Tích</h2>
+                <div class="card p-8 max-w-4xl mx-auto">
+                    <div class="flex items-center gap-4 mb-4">
+                        <i class="ph-bold ph-brain icon"></i>
+                        <p class="text-lg">Đặt câu hỏi hoặc dán dữ liệu của bạn vào đây để nhận phân tích và gợi ý chiến lược từ AI.</p>
+                    </div>
+                    <textarea id="ai-prompt" class="w-full p-3 border border-gray-300 rounded-lg h-32" placeholder="Ví dụ: 'Phân tích dữ liệu bán hàng tháng 7: Dòng Homeland bán được 100 túi, Explorer 30 túi, Aromatico 50 túi. Khách hàng chủ yếu ở Quận 1 và Quận 3. Đề xuất chiến lược marketing cho tháng 8.'"></textarea>
+                    <button id="ai-analyze-btn" class="mt-4 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-magic-wand"></i>
+                        <span>Phân Tích</span>
+                    </button>
+                    <div id="ai-response-container" class="mt-6 hidden">
+                         <h3 class="font-bold text-xl mb-3 text-gray-800">Kết quả phân tích từ AI:</h3>
+                         <div id="ai-response" class="p-4 bg-gray-50 rounded-lg border border-gray-200 text-gray-700 leading-relaxed whitespace-pre-wrap"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Structure -->
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2 id="modalTitle" class="text-2xl font-bold text-[#004ec2] mb-4"></h2>
+            <div id="modalBody" class="text-base leading-relaxed"></div>
+        </div>
+    </div>
+
+    <script>
+        // Tab functionality
+        const tabNav = document.getElementById('tab-nav');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        tabNav.addEventListener('click', (e) => {
+            const tabButton = e.target.closest('.tab-btn');
+            if (tabButton) {
+                tabNav.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('tab-active'));
+                tabPanes.forEach(pane => {
+                    pane.classList.add('hidden');
+                    pane.classList.remove('active');
+                });
+                tabButton.classList.add('tab-active');
+                const tabId = tabButton.getAttribute('data-tab');
+                const activePane = document.getElementById(tabId);
+                activePane.classList.remove('hidden');
+                activePane.classList.add('active');
+            }
+        });
+
+        // Modal functionality
+        const modal = document.getElementById('infoModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalBody = document.getElementById('modalBody');
+        const closeModalBtn = document.querySelector('.modal-close');
+        function showModal(title, content) {
+            modalTitle.innerHTML = title;
+            modalBody.innerHTML = content;
+            modal.style.display = "block";
+        }
+        closeModalBtn.onclick = () => { modal.style.display = "none"; }
+        window.onclick = (event) => { if (event.target == modal) { modal.style.display = "none"; } }
+        document.querySelectorAll('.interactive-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const title = card.getAttribute('data-title');
+                const content = card.getAttribute('data-content');
+                if (title && content) { showModal(title, content); }
+            });
+        });
+
+        // AI Assistant functionality
+        const aiPrompt = document.getElementById('ai-prompt');
+        const analyzeBtn = document.getElementById('ai-analyze-btn');
+        const responseContainer = document.getElementById('ai-response-container');
+        const aiResponseEl = document.getElementById('ai-response');
+
+        analyzeBtn.addEventListener('click', async () => {
+            const userPrompt = aiPrompt.value;
+            if (!userPrompt) {
+                alert('Vui lòng nhập câu hỏi hoặc dữ liệu cần phân tích.');
+                return;
+            }
+
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i><span>Đang phân tích...</span>`;
+            responseContainer.style.display = 'block';
+            aiResponseEl.textContent = 'AI đang suy nghĩ, vui lòng chờ trong giây lát...';
+
+            try {
+                const fullPrompt = `Với vai trò là một chuyên gia tư vấn chiến lược cho một thương hiệu cà phê rang xay địa phương tại Việt Nam, hãy phân tích câu hỏi/dữ liệu sau và đưa ra các insight, cùng gợi ý chiến lược cụ thể, khả thi. Câu hỏi/dữ liệu: "${userPrompt}"`;
+                
+                let chatHistory = [{ role: "user", parts: [{ text: fullPrompt }] }];
+                const payload = { contents: chatHistory };
+                const apiKey = "AIzaSyC1YDiCG_pnAXsWEd3Vh_FIN2zbyAwLcCQ"; // API key updated as requested
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    // Improved error handling to show API message if available
+                    const errorData = await response.json().catch(() => null);
+                    const errorMessage = errorData?.error?.message || `API call failed with status: ${response.status}`;
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    aiResponseEl.textContent = text;
+                } else {
+                     // Handle cases where the response structure is unexpected or content is missing
+                     aiResponseEl.textContent = 'Xin lỗi, AI không thể xử lý yêu cầu này. Phản hồi nhận được không hợp lệ. Vui lòng thử lại với một câu hỏi khác.';
+                }
+
+            } catch (error) {
+                console.error("Error calling AI API:", error);
+                aiResponseEl.textContent = `Đã xảy ra lỗi khi kết nối đến Trợ lý AI: ${error.message}`;
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = `<i class="ph-bold ph-magic-wand"></i><span>Phân Tích</span>`;
+            }
+        });
+    </script>
+</body>
+</html>
