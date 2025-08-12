@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ứng dụng AI Phân tích Tài liệu v6 (Không Popup)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        .nav-link { padding: 8px 16px; border-radius: 8px; transition: background-color 0.3s, color 0.3s; }
+        .nav-link.active { background-color: #2563eb; color: white; font-weight: 600; }
+        .nav-link:not(.active):hover { background-color: #eef2ff; color: #1e3a8a; }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .status-hoatdong { background-color: #dcfce7; color: #166534; }
+        .status-hethan { background-color: #fee2e2; color: #991b1b; }
+        .status-dahuy { background-color: #e5e7eb; color: #4b5563; }
+        .status-chuathanhtoan { background-color: #fef3c7; color: #92400e; }
+        .status-dathanhtoan { background-color: #dcfce7; color: #166534; }
+        .status-quahan { background-color: #ffedd5; color: #9a3412; }
+        .ai-action-button { background-color: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; }
+        .ai-action-button:hover { background-color: #c7d2fe; color: #312e81; }
+        .ai-output-container { min-height: 100px; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div id="app-container" class="p-4 sm:p-6 lg:p-8">
+        <nav class="bg-white/80 backdrop-blur-sm p-3 rounded-xl shadow-md mb-8 flex items-center justify-between sticky top-4 z-50">
+            <div class="flex items-center space-x-3"><div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">AI</div><h1 class="text-2xl font-bold text-gray-800 hidden sm:block">Phân tích Tài liệu</h1></div>
+            <div id="nav-links" class="flex space-x-1 bg-gray-200 p-1 rounded-lg">
+                <button class="nav-link" data-view="dashboard-view">Tổng quan</button>
+                <button class="nav-link" data-view="contract-list-view">Hợp đồng</button>
+                <button class="nav-link" data-view="invoice-list-view">Hóa đơn</button>
+            </div>
+        </nav>
+
+        <main id="main-content">
+            <div id="dashboard-view" class="hidden"></div>
+            <div id="contract-list-view" class="hidden"></div>
+            <div id="invoice-list-view" class="hidden"></div>
+            <div id="contract-detail-view" class="hidden"></div>
+            <div id="invoice-detail-view" class="hidden"></div>
+        </main>
+    </div>
+
+    <script>
+        // --- DỮ LIỆU MÔ PHỎNG ---
+        const contractsCSVData = `Mã HĐ,Tên HĐ,Khách hàng,Giá trị,Trạng thái\nHD-001,Cung cấp dịch vụ MKT,Anh Cường,50000000,Hoạt động\nHD-002,Bán sản phẩm B,Công ty KLM,120000000,Hoạt động\nHD-003,Tư vấn chiến lược,Chị Bích,35000000,Hết hạn\nHD-004,Thiết kế website,Công ty XYZ,75000000,Hoạt động\nHD-005,Quản lý fanpage,Anh Nam,15000000,Đã hủy`;
+        const invoicesCSVData = `Mã HĐ,Mã Hợp Đồng Gốc,Ngày tạo,Số tiền,Hạn TT,Trạng thái\nINV-1025,HD-001,2025-08-10,50000000,2025-08-17,Chưa thanh toán\nINV-1022,HD-002,2025-08-01,120000000,2025-08-08,Đã thanh toán\nINV-1026,HD-003,2025-07-20,35000000,2025-07-27,Quá hạn\nINV-1023,HD-004,2025-08-06,25000000,2025-08-13,Chưa thanh toán\nINV-1024,HD-005,2025-08-09,15000000,2025-08-16,Quá hạn`;
+
+        // --- BIẾN TOÀN CỤC & TRẠNG THÁI ---
+        let contracts = [], invoices = [], currentView = '', charts = {};
+
+        // --- HÀM TIỆN ÍCH ---
+        function parseCSV(csv) { const l=csv.trim().split('\n'); const h=l[0].split(',').map(v=>v.trim()); return l.slice(1).map(r=>{ const vs=r.split(',').map(v=>v.trim()); const e={}; h.forEach((k,i)=>{e[k]=vs[i]}); return e; }); }
+        function formatCurrency(v) { return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v); }
+        function getStatusClass(s) { return `status-${s.toLowerCase().replace(/\s+/g, '')}`; }
+
+        // --- LOGIC ĐIỀU HƯỚNG & RENDER ---
+        function switchView(viewId, detailId = null) {
+            document.querySelectorAll('#main-content > div').forEach(div => div.classList.add('hidden'));
+            const targetView = document.getElementById(viewId);
+            if (targetView) {
+                targetView.classList.remove('hidden');
+                switch(viewId) {
+                    case 'dashboard-view': renderDashboard(); break;
+                    case 'contract-list-view': renderContractList(); break;
+                    case 'invoice-list-view': renderInvoiceList(); break;
+                    case 'contract-detail-view': renderContractDetail(detailId); break;
+                    case 'invoice-detail-view': renderInvoiceDetail(detailId); break;
+                }
+            }
+            
+            document.querySelectorAll('#nav-links .nav-link').forEach(link => {
+                const isTopLevelView = ['dashboard-view', 'contract-list-view', 'invoice-list-view'].includes(viewId);
+                link.classList.toggle('active', isTopLevelView && link.dataset.view === viewId);
+            });
+            currentView = viewId;
+            window.scrollTo(0, 0);
+        }
+
+        // --- RENDER CÁC VIEW ---
+        function renderDashboard() {
+            document.getElementById('dashboard-view').innerHTML = `<header class="mb-6"><h2 class="text-3xl font-bold">Tổng quan</h2><p class="text-lg text-gray-600 mt-1">Tình hình kinh doanh tổng thể.</p></header><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="lg:col-span-3 bg-white rounded-xl shadow p-6"><h3 class="font-bold text-lg text-blue-700 mb-3">💡 Phân tích nhanh từ AI</h3><div id="dashboard-ai-insights" class="text-gray-700 space-y-2 prose"></div></div><div class="bg-white rounded-xl shadow p-6"><h3 class="font-semibold">Trạng thái Hợp đồng</h3><div class="h-64 mt-4"><canvas id="contractsChart"></canvas></div></div><div class="bg-white rounded-xl shadow p-6"><h3 class="font-semibold">Trạng thái Hóa đơn</h3><div class="h-64 mt-4"><canvas id="invoicesChart"></canvas></div></div><div class="bg-white rounded-xl shadow p-6"><h3 class="font-semibold">Giá trị (VND)</h3><div class="h-64 mt-4"><canvas id="valueComparisonChart"></canvas></div></div></div>`;
+            Object.values(charts).forEach(chart => chart.destroy?.());
+            const contractStatus = contracts.reduce((a,c)=>{a[c['Trạng thái']]=(a[c['Trạng thái']]||0)+1;return a},{});
+            const invoiceStatus = invoices.reduce((a,i)=>{a[i['Trạng thái']]=(a[i['Trạng thái']]||0)+1;return a},{});
+            const totalContract = contracts.reduce((s,c)=>s+parseFloat(c['Giá trị']),0);
+            const totalInvoice = invoices.reduce((s,i)=>s+parseFloat(i['Số tiền']),0);
+            const colors = {'Hoạt động':'#22c55e','Hết hạn':'#ef4444','Đã hủy':'#6b7280','Đã thanh toán':'#16a34a','Chưa thanh toán':'#f59e0b','Quá hạn':'#d97706'};
+            charts.c = new Chart('contractsChart',{type:'doughnut',data:{labels:Object.keys(contractStatus),datasets:[{data:Object.values(contractStatus),backgroundColor:Object.keys(contractStatus).map(k=>colors[k])}]},options:{responsive:true,maintainAspectRatio:false}});
+            charts.i = new Chart('invoicesChart',{type:'doughnut',data:{labels:Object.keys(invoiceStatus),datasets:[{data:Object.values(invoiceStatus),backgroundColor:Object.keys(invoiceStatus).map(k=>colors[k])}]},options:{responsive:true,maintainAspectRatio:false}});
+            charts.v = new Chart('valueComparisonChart',{type:'bar',data:{labels:['Tổng giá trị'],datasets:[{label:'Hợp đồng',data:[totalContract],backgroundColor:'#3b82f6'},{label:'Hóa đơn',data:[totalInvoice],backgroundColor:'#84cc16'}]},options:{responsive:true,maintainAspectRatio:false}});
+            
+            const insightsContainer = document.getElementById('dashboard-ai-insights');
+            insightsContainer.innerHTML = `<div class="flex items-center text-gray-500"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>AI đang phân tích...</span></div>`;
+            getAIResponse("Tóm tắt 3 điểm quan trọng nhất về tình hình kinh doanh từ dữ liệu sau", { contracts, invoices }).then(res => { 
+                insightsContainer.innerHTML = `<ul>${res.replace(/\n- /g, '<li>').replace(/\n/g, '</li>')}</ul>`;
+            }).catch(e => {
+                insightsContainer.innerHTML = '<p class="text-red-500">Không thể tải phân tích từ AI.</p>';
+            });
+        }
+
+        function renderContractList() {
+            document.getElementById('contract-list-view').innerHTML = `<header class="mb-6"><h2 class="text-3xl font-bold">Danh sách Hợp đồng</h2></header><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">${contracts.map(c=>`<div class="bg-white rounded-xl shadow hover:shadow-lg transition cursor-pointer p-6" onclick="switchView('contract-detail-view', '${c['Mã HĐ']}')"><div class="flex justify-between items-start"><h3 class="font-bold">${c['Tên HĐ']}</h3><span class="status-badge ${getStatusClass(c['Trạng thái'])}">${c['Trạng thái']}</span></div><p class="text-gray-500 mt-1">${c['Khách hàng']}</p><div class="mt-4 pt-4 border-t"><p class="text-sm text-gray-500">Giá trị</p><p class="text-2xl font-bold text-blue-600">${formatCurrency(c['Giá trị'])}</p></div></div>`).join('')}</div>`;
+        }
+
+        function renderInvoiceList() {
+            document.getElementById('invoice-list-view').innerHTML = `<header class="mb-6"><h2 class="text-3xl font-bold">Danh sách Hóa đơn</h2></header><div class="space-y-4">${invoices.map(i=>`<div class="bg-white rounded-xl shadow hover:shadow-lg transition cursor-pointer p-4 flex justify-between items-center" onclick="switchView('invoice-detail-view', '${i['Mã HĐ']}')"><div><p class="font-bold">${i['Mã HĐ']}</p><p class="text-sm text-gray-600">Khách hàng: ${contracts.find(c=>c['Mã HĐ']===i['Mã Hợp Đồng Gốc'])?.['Khách hàng'] || 'N/A'}</p><p class="text-sm text-gray-600">Số tiền: ${formatCurrency(i['Số tiền'])}</p></div><span class="status-badge ${getStatusClass(i['Trạng thái'])}">${i['Trạng thái']}</span></div>`).join('')}</div>`;
+        }
+
+        function renderContractDetail(id) {
+            const contract = contracts.find(c => c['Mã HĐ'] === id);
+            const relatedInvoices = invoices.filter(i => i['Mã Hợp Đồng Gốc'] === id);
+            const invoicesHtml = relatedInvoices.length > 0 ? relatedInvoices.map(inv => `<div class="bg-gray-50 p-4 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100" onclick="switchView('invoice-detail-view', '${inv['Mã HĐ']}')"><div><p class="font-semibold">${inv['Mã HĐ']}</p><p class="text-sm text-gray-600">Hạn TT: ${inv['Hạn TT']}</p></div><span class="status-badge ${getStatusClass(inv['Trạng thái'])}">${inv['Trạng thái']}</span></div>`).join('<div class="my-3"></div>') : '<p>Không có hóa đơn nào.</p>';
+            document.getElementById('contract-detail-view').innerHTML = `<button onclick="switchView('contract-list-view')" class="mb-6 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">&larr; Quay lại</button><div class="bg-white rounded-xl shadow-lg p-8"><div class="flex justify-between items-start mb-6"><div><h2 class="text-3xl font-bold">${contract['Tên HĐ']}</h2><p class="text-lg text-gray-600">${contract['Khách hàng']}</p></div><span class="status-badge ${getStatusClass(contract['Trạng thái'])}">${contract['Trạng thái']}</span></div><div class="grid grid-cols-1 md:grid-cols-2 gap-8"><div class="space-y-4"> <h4 class="text-xl font-semibold">Hóa đơn liên quan</h4>${invoicesHtml}</div><div class="space-y-4"><h4 class="text-xl font-semibold">Phân tích AI</h4><div class="flex flex-col space-y-3"><button class="ai-action-button p-3 rounded-lg text-left" onclick="handleAIAction('summarize_contract', '${contract['Mã HĐ']}')">Tóm tắt hợp đồng</button><button class="ai-action-button p-3 rounded-lg text-left" onclick="handleAIAction('analyze_risk', '${contract['Mã HĐ']}')">Phân tích rủi ro thanh toán</button></div><div id="ai-output-contract" class="mt-4 p-4 bg-indigo-50 rounded-lg prose ai-output-container"><p class="text-gray-500">Chọn một hành động AI để xem phân tích...</p></div></div></div></div>`;
+        }
+        
+        function renderInvoiceDetail(id) {
+            const invoice = invoices.find(i => i['Mã HĐ'] === id);
+            const contract = contracts.find(c => c['Mã HĐ'] === invoice['Mã Hợp Đồng Gốc']);
+            document.getElementById('invoice-detail-view').innerHTML = `<button onclick="switchView('invoice-list-view')" class="mb-6 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">&larr; Quay lại</button><div class="bg-white rounded-xl shadow-lg p-8"><div class="flex justify-between items-start mb-6"><div><h2 class="text-3xl font-bold">Hóa đơn ${invoice['Mã HĐ']}</h2><p class="text-lg text-gray-600 cursor-pointer hover:underline" onclick="switchView('contract-detail-view', '${contract['Mã HĐ']}')">Hợp đồng: ${contract['Tên HĐ']}</p></div><span class="status-badge ${getStatusClass(invoice['Trạng thái'])}">${invoice['Trạng thái']}</span></div><div class="grid grid-cols-1 md:grid-cols-2 gap-8"><div class="space-y-4"><h4 class="text-xl font-semibold">Chi tiết hóa đơn</h4><div class="bg-gray-50 p-4 rounded-lg"><strong>Khách hàng:</strong> ${contract['Khách hàng']}<br><strong>Ngày tạo:</strong> ${invoice['Ngày tạo']}<br><strong>Hạn thanh toán:</strong> ${invoice['Hạn TT']}<br><strong>Số tiền:</strong> ${formatCurrency(invoice['Số tiền'])}</div></div><div class="space-y-4"><h4 class="text-xl font-semibold">Phân tích AI</h4><div class="flex flex-col space-y-3"><button class="ai-action-button p-3 rounded-lg text-left" onclick="handleAIAction('draft_reminder_email', '${invoice['Mã HĐ']}')">Soạn Email nhắc nợ</button><button class="ai-action-button p-3 rounded-lg text-left" onclick="handleAIAction('suggest_next_step', '${invoice['Mã HĐ']}')">Gợi ý bước tiếp theo</button></div><div id="ai-output-invoice" class="mt-4 p-4 bg-indigo-50 rounded-lg prose ai-output-container"><p class="text-gray-500">Chọn một hành động AI để xem phân tích...</p></div></div></div></div>`;
+        }
+
+        // --- LOGIC AI ---
+        async function handleAIAction(action, primaryId) {
+            let prompt = '', data = {}, outputContainerId = '';
+            
+            switch(action) {
+                case 'summarize_contract':
+                case 'analyze_risk':
+                    outputContainerId = 'ai-output-contract';
+                    break;
+                case 'draft_reminder_email':
+                case 'suggest_next_step':
+                    outputContainerId = 'ai-output-invoice';
+                    break;
+            }
+
+            const outputContainer = document.getElementById(outputContainerId);
+            if (!outputContainer) return;
+            outputContainer.innerHTML = `<div class="flex items-center text-gray-500"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>AI đang phân tích...</span></div>`;
+
+            switch(action) {
+                case 'summarize_contract':
+                    data.contract = contracts.find(c => c['Mã HĐ'] === primaryId);
+                    prompt = `Tóm tắt hợp đồng sau, tập trung vào các bên, giá trị và trạng thái.`;
+                    break;
+                case 'analyze_risk':
+                    data.contract = contracts.find(c => c['Mã HĐ'] === primaryId);
+                    data.invoices = invoices.filter(i => i['Mã Hợp Đồng Gốc'] === primaryId);
+                    prompt = `Phân tích rủi ro thanh toán của hợp đồng này dựa trên các hóa đơn liên quan.`;
+                    break;
+                case 'draft_reminder_email':
+                    data.invoice = invoices.find(i => i['Mã HĐ'] === primaryId);
+                    data.contract = contracts.find(c => c['Mã HĐ'] === data.invoice['Mã Hợp Đồng Gốc']);
+                    prompt = `Soạn một email chuyên nghiệp để nhắc nợ cho hóa đơn này. Định dạng email rõ ràng với tiêu đề, người nhận, và nội dung.`;
+                    break;
+                case 'suggest_next_step':
+                    data.invoice = invoices.find(i => i['Mã HĐ'] === primaryId);
+                    prompt = `Dựa vào trạng thái của hóa đơn này, hãy gợi ý bước tiếp theo cho người quản lý.`;
+                    break;
+            }
+            try {
+                const response = await getAIResponse(prompt, data);
+                outputContainer.innerHTML = response.replace(/\n/g, '<br>');
+            } catch(e) { 
+                outputContainer.innerHTML = '<p class="text-red-500">Không thể nhận phản hồi từ AI. Vui lòng thử lại.</p>';
+            }
+        }
+
+        async function getAIResponse(userQuestion, dataContext) {
+            const fullPrompt = `${userQuestion}\n\nDữ liệu liên quan:\n${JSON.stringify(dataContext, null, 2)}`;
+            const payload = { contents: [{ role: "user", parts: [{ text: fullPrompt }] }] };
+            const apiKey = "AIzaSyDOYSA7urKkHiKfwsIRkYG4PXvQiTcxDH0"; // Updated API Key
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+            const result = await response.json();
+            return result.candidates[0]?.content?.parts[0]?.text || "Không thể nhận phản hồi.";
+        }
+
+        // --- KHỞI TẠO ---
+        document.addEventListener('DOMContentLoaded', () => {
+            contracts = parseCSV(contractsCSVData);
+            invoices = parseCSV(invoicesCSVData);
+            
+            document.querySelectorAll('#nav-links .nav-link').forEach(link => {
+                link.addEventListener('click', () => switchView(link.dataset.view));
+            });
+            
+            switchView('dashboard-view');
+        });
+    </script>
+</body>
+</html>
