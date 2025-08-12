@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Business Dashboard (v3)</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <!-- Custom Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .main-content > div {
+            display: none;
+        }
+        .main-content > div.active {
+            display: block;
+        }
+        .kpi-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .nav-link {
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .nav-link.active {
+            background-color: #1d4ed8;
+            color: white;
+        }
+        .nav-link-external {
+             transition: background-color 0.2s;
+        }
+        .ai-analysis-box {
+            background-color: #eef2ff;
+            border-left: 4px solid #4f46e5;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            min-height: 100px;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="flex flex-col sm:flex-row h-screen">
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-full sm:w-64 bg-gray-800 text-white flex flex-col">
+        <div class="p-6 text-2xl font-bold border-b border-gray-700 text-center sm:text-left">
+            BIZ AI
+        </div>
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+            <!-- Main Navigation -->
+            <a href="#" onclick="showPage('dashboard')" class="nav-link active flex items-center p-3 rounded-lg hover:bg-gray-700">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                Bảng điều khiển
+            </a>
+            <a href="#" onclick="showPage('revenue')" class="nav-link flex items-center p-3 rounded-lg hover:bg-gray-700">
+                 <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                Doanh thu
+            </a>
+            <a href="#" onclick="showPage('costs')" class="nav-link flex items-center p-3 rounded-lg hover:bg-gray-700">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01M12 6v-1m0-1H9.5a2.5 2.5 0 00-2.5 2.5v1.5H6a1.5 1.5 0 00-1.5 1.5v4.5A1.5 1.5 0 006 18h12a1.5 1.5 0 001.5-1.5v-4.5A1.5 1.5 0 0018 10.5h-1.5v-1.5A2.5 2.5 0 0014.5 6H12z"></path></svg>
+                Chi phí
+            </a>
+            <a href="#" onclick="showPage('customers')" class="nav-link flex items-center p-3 rounded-lg hover:bg-gray-700">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                Khách hàng
+            </a>
+            
+            <!-- External Apps -->
+            <div class="mt-6 pt-4 border-t border-gray-700">
+                <h3 class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Apps Phòng Ban</h3>
+                <div class="mt-2 space-y-2">
+                    <a href="https://pro1-liard.vercel.app/" target="_blank" class="nav-link-external flex items-center p-3 rounded-lg hover:bg-gray-700"><svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg><span class="text-sm">The Growth Flywheel</span></a>
+                    <a href="https://mes1-weld.vercel.app/" target="_blank" class="nav-link-external flex items-center p-3 rounded-lg hover:bg-gray-700"><svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg><span class="text-sm">Manufacture Optimizer</span></a>
+                    <a href="https://hr-mocha-chi.vercel.app/" target="_blank" class="nav-link-external flex items-center p-3 rounded-lg hover:bg-gray-700"><svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197M15 21a6 6 0 006-6v-1a3 3 0 00-3-3H6a3 3 0 00-3 3v1a6 6 0 006 6z"></path></svg><span class="text-sm">HR</span></a>
+                    <a href="https://crm-taupe-three.vercel.app/" target="_blank" class="nav-link-external flex items-center p-3 rounded-lg hover:bg-gray-700"><svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg><span class="text-sm">Sales</span></a>
+                    <a href="https://acc-orpin-three.vercel.app/" target="_blank" class="nav-link-external flex items-center p-3 rounded-lg hover:bg-gray-700"><svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span class="text-sm">Accountant (Paperwork)</span></a>
+                    <a href="https://acc2-three.vercel.app/" target="_blank" class="nav-link-external flex items-center p-3 rounded-lg hover:bg-gray-700"><svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span class="text-sm">Accountant (Tax)</span></a>
+                    <a href="https://pd-ashen.vercel.app/" target="_blank" class="nav-link-external flex items-center p-3 rounded-lg hover:bg-gray-700"><svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg><span class="text-sm">Production</span></a>
+                    <a href="https://mkt-liart.vercel.app/" target="_blank" class="nav-link-external flex items-center p-3 rounded-lg hover:bg-gray-700"><svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-2.236 9.168-5.514C18.378 1.282 18.735 1 19 1s.622.282.832.486l.632.632a1.001 1.001 0 010 1.414l-2.122 2.121a1 1 0 01-.88.293c-.422-.023-.82-.1-1.234-.142-1.388-.16-2.823-.024-4.034.428-1.182.44-2.292 1.156-3.252 2.088C8.428 13.21 8.047 14 8 15a1 1 0 001 1h.018a4.992 4.992 0 004.283-2.439M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-2.236 9.168-5.514"></path></svg><span class="text-sm">Marketing</span></a>
+                    <a href="https://mkt2-one.vercel.app/" target="_blank" class="nav-link-external flex items-center p-3 rounded-lg hover:bg-gray-700"><svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg><span class="text-sm">Customer Data Hub</span></a>
+                </div>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4 sm:p-6 lg:p-10 overflow-y-auto">
+        <div class="main-content">
+            <!-- Dashboard Page -->
+            <div id="dashboard-page" class="active">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Bảng điều khiển Tổng quan</h1>
+                    <button onclick="analyzeDashboard()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg hover:bg-indigo-700 shadow flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                        Phân tích với AI
+                    </button>
+                </div>
+                <div id="ai-dashboard" class="mb-6"></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <div class="kpi-card"><h3 class="text-gray-500 font-semibold">Tổng Doanh thu</h3><p id="total-revenue" class="text-2xl lg:text-3xl font-bold text-blue-600 mt-2"></p></div>
+                    <div class="kpi-card"><h3 class="text-gray-500 font-semibold">Tổng Lợi nhuận</h3><p id="total-profit" class="text-2xl lg:text-3xl font-bold text-green-600 mt-2"></p></div>
+                    <div class="kpi-card"><h3 class="text-gray-500 font-semibold">Tổng Chi phí</h3><p id="total-cost" class="text-2xl lg:text-3xl font-bold text-red-600 mt-2"></p></div>
+                    <div class="kpi-card"><h3 class="text-gray-500 font-semibold">Tổng Đơn hàng</h3><p id="total-orders" class="text-2xl lg:text-3xl font-bold text-purple-600 mt-2"></p></div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-bold text-gray-700 mb-4">Tổng quan Doanh thu & Lợi nhuận</h2>
+                    <div class="chart-container"><canvas id="dashboard-chart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Revenue Page -->
+            <div id="revenue-page">
+                 <div id="revenue-list-view">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+                        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Phân tích Doanh thu</h1>
+                        <button onclick="analyzeRevenueOverview()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg hover:bg-indigo-700 shadow flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                            Phân tích Tổng quan
+                        </button>
+                    </div>
+                    <div id="ai-revenue-overview" class="mb-6"></div>
+                    <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+                        <h2 class="text-xl font-bold text-gray-700 mb-4">So sánh Doanh thu Thực tế & Kế hoạch</h2>
+                        <div class="chart-container"><canvas id="revenue-overview-chart"></canvas></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                        <h2 class="text-xl font-bold text-gray-700 mb-4">Doanh thu theo Tháng</h2>
+                        <div class="overflow-x-auto"><table class="min-w-full bg-white"><thead class="bg-gray-100"><tr><th class="py-3 px-4 text-left font-semibold text-gray-600">Tháng</th><th class="py-3 px-4 text-left font-semibold text-gray-600">Kế hoạch</th><th class="py-3 px-4 text-left font-semibold text-gray-600">Thực tế</th><th class="py-3 px-4 text-left font-semibold text-gray-600">Hoàn thành</th><th class="py-3 px-4 text-left font-semibold text-gray-600">Chi tiết</th></tr></thead><tbody id="revenue-table-body"></tbody></table></div>
+                    </div>
+                </div>
+                <div id="revenue-detail-view" style="display:none;"></div>
+            </div>
+
+            <!-- Costs Page -->
+            <div id="costs-page">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Phân tích Chi phí</h1>
+                    <button onclick="analyzeCosts()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg hover:bg-indigo-700 shadow flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                        Phân tích với AI
+                    </button>
+                </div>
+                <div id="ai-costs" class="mb-6"></div>
+                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-lg"><h2 class="text-xl font-bold text-gray-700 mb-4">Cơ cấu Chi phí Tổng</h2><div class="chart-container"><canvas id="costs-pie-chart"></canvas></div></div>
+                    <div class="bg-white p-6 rounded-lg shadow-lg"><h2 class="text-xl font-bold text-gray-700 mb-4">Chi phí qua các Tháng</h2><div class="chart-container"><canvas id="costs-line-chart"></canvas></div></div>
+                </div>
+            </div>
+
+            <!-- Customers Page -->
+            <div id="customers-page">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Phân tích Khách hàng</h1>
+                    <button onclick="analyzeCustomers()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg hover:bg-indigo-700 shadow flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                        Phân tích với AI
+                    </button>
+                </div>
+                <div id="ai-customers" class="mb-6"></div>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-bold text-gray-700 mb-4">Phễu Chuyển đổi Khách hàng</h2>
+                    <p class="text-sm text-gray-500 mb-4">Biểu đồ thể hiện quá trình chuyển đổi từ Khách hàng tiềm năng (Raw Lead) đến Đơn hàng thành công.</p>
+                    <div class="chart-container"><canvas id="funnel-chart"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script>
+// --- DATA (Processed from your CSV files) ---
+const monthlyData = [
+    { month: "7/2024", revenue_actual: 78400000, revenue_projected: 75000000, profit_actual: 23520000, profit_projected: 22500000, cost_marketing_actual: 15000000, cost_sales_actual: 3000000, cost_other_actual: 920000, leads_raw_actual: 204, leads_mql_actual: 143, leads_sql_actual: 100, orders_actual: 40, products: [{ name: "SP 1", actual: 32, projected: 30 }, { name: "SP 2", actual: 8, projected: 10 }] },
+    { month: "8/2024", revenue_actual: 189000000, revenue_projected: 180000000, profit_actual: 66150000, profit_projected: 63000000, cost_marketing_actual: 25000000, cost_sales_actual: 5000000, cost_other_actual: 1000000, leads_raw_actual: 450, leads_mql_actual: 315, leads_sql_actual: 225, orders_actual: 90, products: [{ name: "SP 1", actual: 60, projected: 60 }, { name: "SP 2", actual: 30, projected: 28 }] },
+    { month: "9/2024", revenue_actual: 210500000, revenue_projected: 225000000, profit_actual: 73675000, profit_projected: 78750000, cost_marketing_actual: 30000000, cost_sales_actual: 6000000, cost_other_actual: 1100000, leads_raw_actual: 510, leads_mql_actual: 357, leads_sql_actual: 255, orders_actual: 102, products: [{ name: "SP 1", actual: 70, projected: 75 }, { name: "SP 2", actual: 35, projected: 35 }] },
+    { month: "10/2024", revenue_actual: 245000000, revenue_projected: 262500000, profit_actual: 85750000, profit_projected: 91875000, cost_marketing_actual: 35000000, cost_sales_actual: 7000000, cost_other_actual: 1200000, leads_raw_actual: 595, leads_mql_actual: 416, leads_sql_actual: 297, orders_actual: 119, products: [{ name: "SP 1", actual: 80, projected: 85 }, { name: "SP 2", actual: 45, projected: 45 }] },
+    { month: "11/2024", revenue_actual: 280000000, revenue_projected: 300000000, profit_actual: 98000000, profit_projected: 105000000, cost_marketing_actual: 40000000, cost_sales_actual: 8000000, cost_other_actual: 1300000, leads_raw_actual: 680, leads_mql_actual: 476, leads_sql_actual: 340, orders_actual: 136, products: [{ name: "SP 1", actual: 90, projected: 95 }, { name: "SP 2", actual: 50, projected: 55 }] },
+    { month: "12/2024", revenue_actual: 315000000, revenue_projected: 337500000, profit_actual: 110250000, profit_projected: 118125000, cost_marketing_actual: 45000000, cost_sales_actual: 9000000, cost_other_actual: 1400000, leads_raw_actual: 765, leads_mql_actual: 535, leads_sql_actual: 382, orders_actual: 153, products: [{ name: "SP 1", actual: 100, projected: 110 }, { name: "SP 2", actual: 55, projected: 60 }] },
+];
+
+// --- Global Variables & Config ---
+const API_KEY = "AIzaSyDiUWJuDt0VGce3wGG7jWLKBt3UNRsx1JA";
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-preview-0514:generateContent?key=${API_KEY}`;
+let activeCharts = [];
+Chart.register(ChartDataLabels);
+
+// --- Helper Functions ---
+const formatCurrency = (value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+const formatNumber = (num, decimals = 1) => num.toLocaleString('vi-VN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+
+const formatCurrencyShort = (value) => {
+    if (value >= 1e9) {
+        return (value / 1e9).toFixed(1) + ' Tỷ';
+    }
+    if (value >= 1e6) {
+        return (value / 1e6).toFixed(1) + ' Tr';
+    }
+    if (value >= 1e3) {
+        return (value / 1e3).toFixed(1) + ' K';
+    }
+    return value.toString();
+};
+
+
+const showLoader = (elementId) => {
+    document.getElementById(elementId).innerHTML = `<div class="ai-analysis-box"><div class="flex items-center"><div class="loader"></div><p class="ml-4 text-gray-600">AI đang phân tích, vui lòng chờ...</p></div></div>`;
+};
+
+// --- AI Analysis Function ---
+async function getAiAnalysis(prompt, elementId) {
+    showLoader(elementId);
+    try {
+        const payload = {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.5, topP: 0.95, topK: 40 }
+        };
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error.message || `HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        const analysisText = data.candidates[0].content.parts[0].text;
+        
+        let htmlText = analysisText
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/^- (.*$)/gm, '<li class="ml-4 list-disc">$1</li>');
+        htmlText = htmlText.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+
+        document.getElementById(elementId).innerHTML = `<div class="ai-analysis-box"><h3 class="text-xl font-bold text-indigo-800 mb-3">💡 Phân tích từ AI</h3><div class="text-gray-700 space-y-2">${htmlText}</div></div>`;
+    } catch (error) {
+        console.error("Error fetching AI analysis:", error);
+        document.getElementById(elementId).innerHTML = `<div class="ai-analysis-box"><div class="text-red-600 font-semibold">Lỗi: Không thể nhận phân tích từ AI. Vui lòng kiểm tra lại API Key và kết nối mạng.<br><small>Chi tiết: ${error.message}</small></div></div>`;
+    }
+}
+
+// --- Chart Rendering Functions ---
+function destroyCharts() {
+    activeCharts.forEach(chart => chart.destroy());
+    activeCharts = [];
+}
+
+function renderDashboard() {
+    const totalRevenue = monthlyData.reduce((sum, item) => sum + item.revenue_actual, 0);
+    const totalProfit = monthlyData.reduce((sum, item) => sum + item.profit_actual, 0);
+    const totalCost = monthlyData.reduce((sum, item) => sum + item.cost_marketing_actual + item.cost_sales_actual + item.cost_other_actual, 0);
+    const totalOrders = monthlyData.reduce((sum, item) => sum + item.orders_actual, 0);
+
+    document.getElementById('total-revenue').textContent = formatCurrencyShort(totalRevenue);
+    document.getElementById('total-profit').textContent = formatCurrencyShort(totalProfit);
+    document.getElementById('total-cost').textContent = formatCurrencyShort(totalCost);
+    document.getElementById('total-orders').textContent = totalOrders.toLocaleString('vi-VN');
+
+    const ctx = document.getElementById('dashboard-chart').getContext('2d');
+    const dashboardChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: monthlyData.map(d => d.month),
+            datasets: [
+                { label: 'Doanh thu Thực tế', data: monthlyData.map(d => d.revenue_actual), backgroundColor: 'rgba(59, 130, 246, 0.7)', yAxisID: 'y' },
+                { label: 'Lợi nhuận Thực tế', data: monthlyData.map(d => d.profit_actual), backgroundColor: 'rgba(16, 185, 129, 0.7)', type: 'line', yAxisID: 'y', tension: 0.3 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { callback: value => formatCurrencyShort(value) } } },
+            plugins: { tooltip: { callbacks: { label: context => `${context.dataset.label}: ${formatCurrency(context.raw)}` } } }
+        }
+    });
+    activeCharts.push(dashboardChart);
+}
+
+function analyzeDashboard() {
+    const totalRevenue = monthlyData.reduce((sum, item) => sum + item.revenue_actual, 0);
+    const prompt = `Tôi là chủ doanh nghiệp. Dữ liệu kinh doanh 6 tháng qua: ${JSON.stringify(monthlyData)}. Tổng doanh thu là ${formatCurrency(totalRevenue)}. Hãy phân tích tổng quan, chỉ ra điểm sáng, vấn đề cần lưu ý và đề xuất 3 hành động chiến lược cho quý tới.`;
+    getAiAnalysis(prompt, 'ai-dashboard');
+}
+
+function renderRevenuePage() {
+    const ctx = document.getElementById('revenue-overview-chart').getContext('2d');
+    const revenueChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: monthlyData.map(d => d.month),
+            datasets: [
+                { label: 'Doanh thu Thực tế', data: monthlyData.map(d => d.revenue_actual), borderColor: 'rgba(59, 130, 246, 1)', backgroundColor: 'rgba(59, 130, 246, 0.2)', fill: true, tension: 0.4 },
+                { label: 'Doanh thu Kế hoạch', data: monthlyData.map(d => d.revenue_projected), borderColor: 'rgba(239, 68, 68, 1)', borderDash: [5, 5], fill: false, tension: 0.4 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { callback: value => formatCurrencyShort(value) } } },
+            plugins: { tooltip: { callbacks: { label: context => `${context.dataset.label}: ${formatCurrency(context.raw)}` } } }
+        }
+    });
+    activeCharts.push(revenueChart);
+
+    const tableBody = document.getElementById('revenue-table-body');
+    tableBody.innerHTML = '';
+    monthlyData.forEach((item, index) => {
+        const percentage = (item.revenue_actual / item.revenue_projected * 100);
+        tableBody.innerHTML += `
+            <tr class="hover:bg-gray-50 border-b">
+                <td class="py-3 px-4">${item.month}</td>
+                <td class="py-3 px-4">${formatCurrencyShort(item.revenue_projected)}</td>
+                <td class="py-3 px-4">${formatCurrencyShort(item.revenue_actual)}</td>
+                <td class="py-3 px-4"><div class="w-full bg-gray-200 rounded-full h-2.5"><div class="h-2.5 rounded-full ${percentage >= 100 ? 'bg-green-500' : (percentage >= 80 ? 'bg-yellow-400' : 'bg-red-500')}" style="width: ${Math.min(percentage, 100)}%"></div></div><span class="text-sm font-medium ml-2">${formatNumber(percentage, 1)}%</span></td>
+                <td class="py-3 px-4"><button onclick="showRevenueDetail(${index})" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">Xem</button></td>
+            </tr>`;
+    });
+}
+
+function analyzeRevenueOverview() {
+    const prompt = `Phân tích tổng quan tình hình doanh thu 6 tháng qua dựa trên dữ liệu sau: ${JSON.stringify(monthlyData.map(d => ({thang: d.month, ke_hoach: d.revenue_projected, thuc_te: d.revenue_actual})))}. Chỉ ra tháng tốt, tháng chưa đạt và xu hướng chung. Đưa ra 2 đề xuất cải thiện.`;
+    getAiAnalysis(prompt, 'ai-revenue-overview');
+}
+
+function showRevenueDetail(index) {
+    destroyCharts();
+    const data = monthlyData[index];
+    document.getElementById('revenue-list-view').style.display = 'none';
+    const detailView = document.getElementById('revenue-detail-view');
+    
+    detailView.innerHTML = `
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Chi tiết Doanh thu Tháng ${data.month}</h1>
+            <button onclick="analyzeRevenueDetail(${index})" class="bg-indigo-600 text-white px-5 py-2 rounded-lg hover:bg-indigo-700 shadow flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                Phân tích Tháng này
+            </button>
+        </div>
+        <div id="ai-revenue-detail" class="mb-6"></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow-lg"><h2 class="text-xl font-bold text-gray-700 mb-4">Kế hoạch vs. Thực tế</h2><div class="chart-container"><canvas id="revenue-detail-bar"></canvas></div></div>
+            <div class="bg-white p-6 rounded-lg shadow-lg"><h2 class="text-xl font-bold text-gray-700 mb-4">Hiệu suất Sản phẩm</h2><div class="chart-container"><canvas id="revenue-detail-pie"></canvas></div></div>
+        </div>
+        <button onclick="hideRevenueDetail()" class="mt-8 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">&larr; Quay lại danh sách</button>
+    `;
+    detailView.style.display = 'block';
+
+    const barCtx = document.getElementById('revenue-detail-bar').getContext('2d');
+    const barChart = new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Doanh thu', 'Lợi nhuận'],
+            datasets: [
+                { label: 'Kế hoạch', data: [data.revenue_projected, data.profit_projected], backgroundColor: 'rgba(239, 68, 68, 0.7)' },
+                { label: 'Thực tế', data: [data.revenue_actual, data.profit_actual], backgroundColor: 'rgba(59, 130, 246, 0.7)' }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: value => formatCurrencyShort(value) } } }, plugins: { tooltip: { callbacks: { label: context => `${context.dataset.label}: ${formatCurrency(context.raw)}` } } } }
+    });
+
+    const pieCtx = document.getElementById('revenue-detail-pie').getContext('2d');
+    const pieChart = new Chart(pieCtx, {
+        type: 'pie',
+        data: {
+            labels: data.products.map(p => p.name),
+            datasets: [{ label: 'Số lượng bán ra', data: data.products.map(p => p.actual), backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(16, 185, 129, 0.8)', 'rgba(245, 158, 11, 0.8)'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: { formatter: (value) => value, color: '#fff' } } }
+    });
+    activeCharts.push(barChart, pieChart);
+}
+
+function analyzeRevenueDetail(index) {
+     const data = monthlyData[index];
+     const prompt = `Phân tích sâu hiệu suất kinh doanh tháng ${data.month}: ${JSON.stringify(data)}. Đánh giá mức độ hoàn thành mục tiêu, phân tích hiệu quả từng sản phẩm, và đề xuất 1 hành động cụ thể cho tháng tới.`;
+    getAiAnalysis(prompt, 'ai-revenue-detail');
+}
+
+function hideRevenueDetail() {
+    destroyCharts();
+    document.getElementById('revenue-detail-view').style.display = 'none';
+    document.getElementById('revenue-list-view').style.display = 'block';
+    renderRevenuePage();
+}
+
+function renderCostsPage() {
+    const totalMarketing = monthlyData.reduce((sum, item) => sum + item.cost_marketing_actual, 0);
+    const totalSales = monthlyData.reduce((sum, item) => sum + item.cost_sales_actual, 0);
+    const totalOther = monthlyData.reduce((sum, item) => sum + item.cost_other_actual, 0);
+
+    const pieCtx = document.getElementById('costs-pie-chart').getContext('2d');
+    const pieChart = new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Marketing', 'Sales', 'Khác'],
+            datasets: [{ data: [totalMarketing, totalSales, totalOther], backgroundColor: ['rgba(239, 68, 68, 0.8)', 'rgba(245, 158, 11, 0.8)', 'rgba(107, 114, 128, 0.8)'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: context => `${context.label}: ${formatCurrency(context.raw)}` } }, datalabels: { formatter: (value, ctx) => { let sum = 0; let dataArr = ctx.chart.data.datasets[0].data; dataArr.map(data => { sum += data; }); let percentage = (value*100 / sum).toFixed(1)+"%"; return percentage; }, color: '#fff' } } }
+    });
+
+    const lineCtx = document.getElementById('costs-line-chart').getContext('2d');
+    const lineChart = new Chart(lineCtx, {
+        type: 'line',
+        data: {
+            labels: monthlyData.map(d => d.month),
+            datasets: [
+                { label: 'Marketing', data: monthlyData.map(d => d.cost_marketing_actual), borderColor: 'rgba(239, 68, 68, 1)', tension: 0.3 },
+                { label: 'Sales', data: monthlyData.map(d => d.cost_sales_actual), borderColor: 'rgba(245, 158, 11, 1)', tension: 0.3 },
+                { label: 'Khác', data: monthlyData.map(d => d.cost_other_actual), borderColor: 'rgba(107, 114, 128, 1)', tension: 0.3 }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: value => formatCurrencyShort(value) } } }, plugins: { tooltip: { callbacks: { label: context => `${context.dataset.label}: ${formatCurrency(context.raw)}` } } } }
+    });
+    activeCharts.push(pieChart, lineChart);
+}
+
+function analyzeCosts() {
+    const prompt = `Phân tích chi phí 6 tháng qua: ${JSON.stringify(monthlyData.map(d => ({thang: d.month, mkt: d.cost_marketing_actual, sales: d.cost_sales_actual, khac: d.cost_other_actual})))}. Đánh giá hiệu quả phân bổ chi phí và xu hướng. Đề xuất 2 cách tối ưu hóa chi phí mà không ảnh hưởng doanh thu.`;
+    getAiAnalysis(prompt, 'ai-costs');
+}
+
+function renderCustomersPage() {
+    const totalRaw = monthlyData.reduce((sum, item) => sum + item.leads_raw_actual, 0);
+    const totalMql = monthlyData.reduce((sum, item) => sum + item.leads_mql_actual, 0);
+    const totalSql = monthlyData.reduce((sum, item) => sum + item.leads_sql_actual, 0);
+    const totalOrders = monthlyData.reduce((sum, item) => sum + item.orders_actual, 0);
+    const funnelData = [totalRaw, totalMql, totalSql, totalOrders];
+
+    const funnelCtx = document.getElementById('funnel-chart').getContext('2d');
+    const funnelChart = new Chart(funnelCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Raw Leads', 'MQL', 'SQL', 'Đơn hàng'],
+            datasets: [{
+                label: 'Số lượng',
+                data: funnelData,
+                backgroundColor: ['rgba(139, 92, 246, 0.7)', 'rgba(99, 102, 241, 0.7)', 'rgba(59, 130, 246, 0.7)', 'rgba(16, 185, 129, 0.7)'],
+            }]
+        },
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            scales: { x: { display: false }, y: { grid: { display: false } } },
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    anchor: 'end', align: 'end',
+                    formatter: (value, context) => {
+                        const prevValue = context.chart.data.datasets[0].data[context.dataIndex - 1];
+                        if (context.dataIndex > 0) {
+                            const rate = ((value / prevValue) * 100);
+                            return `${value.toLocaleString('vi-VN')}\n(${formatNumber(rate, 1)}%)`;
+                        }
+                        return value.toLocaleString('vi-VN');
+                    },
+                    color: '#333', font: { weight: 'bold' }
+                }
+            }
+        }
+    });
+    activeCharts.push(funnelChart);
+}
+
+function analyzeCustomers() {
+     const prompt = `Phân tích phễu chuyển đổi khách hàng 6 tháng qua: Raw Leads -> MQL -> SQL -> Đơn hàng, với dữ liệu sau: ${JSON.stringify(monthlyData.map(d => ({thang: d.month, raw: d.leads_raw_actual, mql: d.leads_mql_actual, sql: d.leads_sql_actual, orders: d.orders_actual})))}. Hãy xác định giai đoạn nào trong phễu đang yếu nhất (tỉ lệ chuyển đổi thấp) và đề xuất 2 chiến lược cụ thể để cải thiện "nút thắt cổ chai" đó.`;
+    getAiAnalysis(prompt, 'ai-customers');
+}
+
+// --- Main Page Navigation ---
+function showPage(pageId) {
+    destroyCharts();
+    
+    document.querySelectorAll('.main-content > div').forEach(page => page.classList.remove('active'));
+    document.getElementById(`${pageId}-page`).classList.add('active');
+
+    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+    document.querySelector(`.nav-link[onclick="showPage('${pageId}')"]`).classList.add('active');
+
+    document.querySelectorAll('[id^="ai-"]').forEach(el => el.innerHTML = '');
+
+    switch (pageId) {
+        case 'dashboard': renderDashboard(); break;
+        case 'revenue':
+            document.getElementById('revenue-list-view').style.display = 'block';
+            document.getElementById('revenue-detail-view').style.display = 'none';
+            renderRevenuePage();
+            break;
+        case 'costs': renderCostsPage(); break;
+        case 'customers': renderCustomersPage(); break;
+    }
+}
+
+// --- Initial Load ---
+window.onload = () => {
+    showPage('dashboard');
+};
+</script>
+
+</body>
+</html>
