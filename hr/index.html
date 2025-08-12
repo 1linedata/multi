@@ -121,7 +121,7 @@ NV007,Hoàng Nam,Sales,23000000,Chờ duyệt`;
         // --- AI & API FUNCTIONS ---
         async function askAI(prompt, context) {
             const promptWrapper = `Bạn là một trợ lý AI phân tích dữ liệu nhân sự. Hãy trả lời ngắn gọn, chính xác bằng tiếng Việt. Context: ${context}. Nhiệm vụ: "${prompt}"`;
-            const apiKey = ""; // Leave empty
+            const apiKey = "AIzaSyDOYSA7urKkHiKfwsIRkYG4PXvQiTcxDH0"; // API Key updated
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
             const payload = { contents: [{ parts: [{ text: promptWrapper }] }] };
             for (let i = 0; i < 3; i++) {
