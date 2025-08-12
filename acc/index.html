@@ -93,7 +93,14 @@
             charts.c = new Chart('contractsChart',{type:'doughnut',data:{labels:Object.keys(contractStatus),datasets:[{data:Object.values(contractStatus),backgroundColor:Object.keys(contractStatus).map(k=>colors[k])}]},options:{responsive:true,maintainAspectRatio:false}});
             charts.i = new Chart('invoicesChart',{type:'doughnut',data:{labels:Object.keys(invoiceStatus),datasets:[{data:Object.values(invoiceStatus),backgroundColor:Object.keys(invoiceStatus).map(k=>colors[k])}]},options:{responsive:true,maintainAspectRatio:false}});
             charts.v = new Chart('valueComparisonChart',{type:'bar',data:{labels:['Tổng giá trị'],datasets:[{label:'Hợp đồng',data:[totalContract],backgroundColor:'#3b82f6'},{label:'Hóa đơn',data:[totalInvoice],backgroundColor:'#84cc16'}]},options:{responsive:true,maintainAspectRatio:false}});
-            getAIResponse("Tóm tắt 3 điểm quan trọng nhất về tình hình kinh doanh từ dữ liệu sau", { contracts, invoices }).then(res => { document.getElementById('dashboard-ai-insights').innerHTML = `<ul>${res.replace(/\n- /g, '<li>').replace(/\n/g, '</li>')}</ul>`});
+            
+            const insightsContainer = document.getElementById('dashboard-ai-insights');
+            insightsContainer.innerHTML = `<div class="flex items-center text-gray-500"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>AI đang phân tích...</span></div>`;
+            getAIResponse("Tóm tắt 3 điểm quan trọng nhất về tình hình kinh doanh từ dữ liệu sau", { contracts, invoices }).then(res => { 
+                insightsContainer.innerHTML = `<ul>${res.replace(/\n- /g, '<li>').replace(/\n/g, '</li>')}</ul>`;
+            }).catch(e => {
+                insightsContainer.innerHTML = '<p class="text-red-500">Không thể tải phân tích từ AI.</p>';
+            });
         }
 
         function renderContractList() {
@@ -134,7 +141,7 @@
 
             const outputContainer = document.getElementById(outputContainerId);
             if (!outputContainer) return;
-            outputContainer.innerHTML = '<div class="flex justify-center items-center h-full"><p>AI đang phân tích...</p></div>';
+            outputContainer.innerHTML = `<div class="flex items-center text-gray-500"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>AI đang phân tích...</span></div>`;
 
             switch(action) {
                 case 'summarize_contract':
@@ -167,7 +174,7 @@
         async function getAIResponse(userQuestion, dataContext) {
             const fullPrompt = `${userQuestion}\n\nDữ liệu liên quan:\n${JSON.stringify(dataContext, null, 2)}`;
             const payload = { contents: [{ role: "user", parts: [{ text: fullPrompt }] }] };
-            const apiKey = ""; // Provided by Canvas
+            const apiKey = "AIzaSyDOYSA7urKkHiKfwsIRkYG4PXvQiTcxDH0"; // Updated API Key
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) throw new Error(`API Error: ${response.status}`);
