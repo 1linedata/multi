@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Business Dashboard (v3)</title>
+    <title>AI Business Dashboard (v4)</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js for charts -->
@@ -212,7 +212,7 @@ const monthlyData = [
 
 // --- Global Variables & Config ---
 const API_KEY = "AIzaSyDiUWJuDt0VGce3wGG7jWLKBt3UNRsx1JA";
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-preview-0514:generateContent?key=${API_KEY}`;
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
 let activeCharts = [];
 Chart.register(ChartDataLabels);
 
