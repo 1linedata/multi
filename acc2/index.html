@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard AI cho Thuế & Lương</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        .nav-link { padding: 8px 16px; border-radius: 8px; transition: background-color 0.3s, color 0.3s; }
+        .nav-link.active { background-color: #2563eb; color: white; font-weight: 600; }
+        .nav-link:not(.active):hover { background-color: #eef2ff; color: #1e3a8a; }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .status-danop { background-color: #dcfce7; color: #166534; }
+        .status-chuadenhan { background-color: #fef3c7; color: #92400e; }
+        .status-quahan { background-color: #fee2e2; color: #991b1b; }
+        .ai-action-button { background-color: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; }
+        .ai-action-button:hover { background-color: #c7d2fe; color: #312e81; }
+        .ai-output-container { min-height: 120px; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div id="app-container" class="p-4 sm:p-6 lg:p-8">
+        <nav class="bg-white/80 backdrop-blur-sm p-3 rounded-xl shadow-md mb-8 flex items-center justify-between sticky top-4 z-50">
+            <div class="flex items-center space-x-3"><div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">AI</div><h1 class="text-2xl font-bold text-gray-800 hidden sm:block">Dashboard Thuế & Lương</h1></div>
+            <div id="nav-links" class="flex space-x-1 bg-gray-200 p-1 rounded-lg">
+                <button class="nav-link" data-view="dashboard-view">Tổng quan</button>
+                <button class="nav-link" data-view="employee-list-view">Nhân sự</button>
+                <button class="nav-link" data-view="tax-list-view">Tờ khai thuế</button>
+            </div>
+        </nav>
+
+        <main id="main-content">
+            <div id="dashboard-view" class="hidden"></div>
+            <div id="employee-list-view" class="hidden"></div>
+            <div id="tax-list-view" class="hidden"></div>
+            <div id="employee-detail-view" class="hidden"></div>
+            <div id="tax-detail-view" class="hidden"></div>
+        </main>
+    </div>
+
+    <script>
+        // --- DỮ LIỆU GIẢ ĐỊNH THỰC TẾ ---
+        const employeesCSVData = `Mã NV,Họ và Tên,Chức vụ,Phòng ban,Lương cơ bản,Số người phụ thuộc
+NV001,Nguyễn Văn An,Trưởng phòng,Kinh doanh,25000000,2
+NV002,Trần Thị Bình,Chuyên viên,Marketing,15000000,1
+NV003,Lê Minh Cường,Lập trình viên,Kỹ thuật,18000000,0
+NV004,Phạm Thị Dung,Kế toán,Tài chính,16000000,1
+NV005,Hoàng Văn Em,Chuyên viên,Kinh doanh,17000000,1`;
+
+        const payrollsCSVData = `Mã Bảng lương,Mã NV,Kỳ lương,Phụ cấp,Thưởng,BHXH,BHYT,BHTN,Thuế TNCN,Thực nhận
+BL07-001,NV001,07/2025,2000000,5000000,2000000,375000,250000,2845000,26530000
+BL07-002,NV002,07/2025,1000000,2000000,1200000,225000,150000,795000,15630000
+BL07-003,NV003,07/2025,1500000,3000000,1440000,270000,180000,1480000,19130000
+BL07-004,NV004,07/2025,1000000,1500000,1280000,240000,160000,805000,16015000
+BL07-005,NV005,07/2025,1000000,2500000,1360000,255000,170000,1195000,17520000`;
+
+        const taxDeclarationsCSVData = `Mã Tờ khai,Kỳ kê khai,Loại thuế,Số tiền phải nộp,Đã nộp,Hạn nộp,Trạng thái
+TK07-TNCN,07/2025,TNCN,7120000,0,20/08/2025,Chưa đến hạn
+TKQ2-TNDN,Q2/2025,TNDN,125000000,125000000,30/07/2025,Đã nộp
+TK06-TNCN,06/2025,TNCN,6950000,6950000,20/07/2025,Đã nộp
+TKQ1-TNDN,Q1/2025,TNDN,110000000,110000000,30/04/2025,Đã nộp`;
+
+        // --- BIẾN TOÀN CỤC & TRẠNG THÁI ---
+        let employees = [], payrolls = [], taxDeclarations = [], currentView = '', charts = {};
+
+        // --- HÀM TIỆN ÍCH ---
+        function parseCSV(csv) { const l=csv.trim().split('\n'); const h=l[0].split(',').map(v=>v.trim()); return l.slice(1).map(r=>{ const vs=r.split(',').map(v=>v.trim()); const e={}; h.forEach((k,i)=>{e[k]=vs[i]}); return e; }); }
+        function formatCurrency(v) { return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v); }
+        function getStatusClass(s) { return `status-${s.toLowerCase().replace(/\s+/g, '')}`; }
+
+        // --- LOGIC ĐIỀU HƯỚNG & RENDER ---
+        function switchView(viewId, detailId = null) {
+            document.querySelectorAll('#main-content > div').forEach(div => div.classList.add('hidden'));
+            const targetView = document.getElementById(viewId);
+            if (targetView) {
+                targetView.classList.remove('hidden');
+                switch(viewId) {
+                    case 'dashboard-view': renderDashboard(); break;
+                    case 'employee-list-view': renderEmployeeList(); break;
+                    case 'tax-list-view': renderTaxList(); break;
+                    case 'employee-detail-view': renderEmployeeDetail(detailId); break;
+                    case 'tax-detail-view': renderTaxDetail(detailId); break;
+                }
+            }
+            document.querySelectorAll('#nav-links .nav-link').forEach(link => {
+                const isTopLevelView = ['dashboard-view', 'employee-list-view', 'tax-list-view'].includes(viewId);
+                link.classList.toggle('active', isTopLevelView && link.dataset.view === viewId);
+            });
+            currentView = viewId;
+            window.scrollTo(0, 0);
+        }
+
+        // --- RENDER CÁC VIEW ---
+        function renderDashboard() {
+            document.getElementById('dashboard-view').innerHTML = `<header class="mb-6"><h2 class="text-3xl font-bold">Tổng quan Thuế & Lương</h2></header><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="lg:col-span-3 bg-white rounded-xl shadow p-6"><h3 class="font-bold text-lg text-blue-700 mb-3">💡 Phân tích nhanh từ AI</h3><div id="dashboard-ai-insights" class="text-gray-700 space-y-2 prose"></div></div><div class="bg-white rounded-xl shadow p-6"><h3 class="font-semibold">Phân bổ nhân sự</h3><div class="h-64 mt-4"><canvas id="empDepartChart"></canvas></div></div><div class="bg-white rounded-xl shadow p-6"><h3 class="font-semibold">Trạng thái tờ khai</h3><div class="h-64 mt-4"><canvas id="taxStatusChart"></canvas></div></div><div class="bg-white rounded-xl shadow p-6"><h3 class="font-semibold">Lương & Thuế (Kỳ 07/2025)</h3><div class="h-64 mt-4"><canvas id="salaryTaxChart"></canvas></div></div></div>`;
+            Object.values(charts).forEach(chart => chart.destroy?.());
+            const empByDept = employees.reduce((a,c)=>{a[c['Phòng ban']]=(a[c['Phòng ban']]||0)+1;return a},{});
+            const taxStatus = taxDeclarations.reduce((a,c)=>{a[c['Trạng thái']]=(a[c['Trạng thái']]||0)+1;return a},{});
+            const latestPayroll = payrolls.filter(p => p['Kỳ lương'] === '07/2025');
+            const totalSalary = latestPayroll.reduce((s,p)=>s+parseFloat(p['Thực nhận']),0);
+            const totalTax = latestPayroll.reduce((s,p)=>s+parseFloat(p['Thuế TNCN']),0);
+            
+            charts.emp = new Chart('empDepartChart',{type:'pie',data:{labels:Object.keys(empByDept),datasets:[{data:Object.values(empByDept),backgroundColor:['#3b82f6','#ef4444','#22c55e','#f97316']}]},options:{responsive:true,maintainAspectRatio:false}});
+            charts.tax = new Chart('taxStatusChart',{type:'doughnut',data:{labels:Object.keys(taxStatus),datasets:[{data:Object.values(taxStatus),backgroundColor:['#f59e0b','#16a34a','#ef4444']}]},options:{responsive:true,maintainAspectRatio:false}});
+            charts.salary = new Chart('salaryTaxChart',{type:'bar',data:{labels:['Kỳ 07/2025'],datasets:[{label:'Tổng lương',data:[totalSalary],backgroundColor:'#3b82f6'},{label:'Tổng thuế TNCN',data:[totalTax],backgroundColor:'#ef4444'}]},options:{responsive:true,maintainAspectRatio:false}});
+            
+            const insightsContainer = document.getElementById('dashboard-ai-insights');
+            insightsContainer.innerHTML = `<div class="flex items-center text-gray-500"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>AI đang phân tích...</span></div>`;
+            getAIResponse("Với vai trò là một trưởng phòng nhân sự, hãy nêu 3 nhận định hoặc cảnh báo quan trọng nhất từ toàn bộ dữ liệu nhân sự, lương và thuế.", { employees, payrolls, taxDeclarations }).then(res => { 
+                insightsContainer.innerHTML = `<ul>${res.replace(/\n- /g, '<li>').replace(/\n/g, '</li>')}</ul>`;
+            }).catch(e => {
+                insightsContainer.innerHTML = '<p class="text-red-500">Không thể tải phân tích từ AI.</p>';
+            });
+        }
+
+        function renderEmployeeList() {
+            document.getElementById('employee-list-view').innerHTML = `<header class="mb-6"><h2 class="text-3xl font-bold">Danh sách Nhân sự</h2></header><div class="space-y-4">${employees.map(e=>`<div class="bg-white rounded-xl shadow hover:shadow-lg transition cursor-pointer p-4 flex justify-between items-center" onclick="switchView('employee-detail-view', '${e['Mã NV']}')"><div><p class="font-bold">${e['Họ và Tên']} (${e['Mã NV']})</p><p class="text-sm text-gray-600">${e['Chức vụ']} - ${e['Phòng ban']}</p></div><p class="text-blue-600 font-semibold">${formatCurrency(e['Lương cơ bản'])}</p></div>`).join('')}</div>`;
+        }
+
+        function renderTaxList() {
+            document.getElementById('tax-list-view').innerHTML = `<header class="mb-6"><h2 class="text-3xl font-bold">Danh sách Tờ khai thuế</h2></header><div class="space-y-4">${taxDeclarations.map(t=>`<div class="bg-white rounded-xl shadow hover:shadow-lg transition cursor-pointer p-4 flex justify-between items-center" onclick="switchView('tax-detail-view', '${t['Mã Tờ khai']}')"><div><p class="font-bold">${t['Loại thuế']} - Kỳ ${t['Kỳ kê khai']}</p><p class="text-sm text-gray-600">Hạn nộp: ${t['Hạn nộp']}</p><p class="text-sm text-gray-600">Số tiền: ${formatCurrency(t['Số tiền phải nộp'])}</p></div><span class="status-badge ${getStatusClass(t['Trạng thái'])}">${t['Trạng thái']}</span></div>`).join('')}</div>`;
+        }
+
+        function renderEmployeeDetail(id) {
+            const employee = employees.find(e => e['Mã NV'] === id);
+            const employeePayrolls = payrolls.filter(p => p['Mã NV'] === id);
+            const payrollsHtml = employeePayrolls.length > 0 ? employeePayrolls.map(p => `<div class="bg-gray-50 p-3 rounded-lg">Kỳ <strong>${p['Kỳ lương']}</strong> - Thực nhận: <strong class="text-green-600">${formatCurrency(p['Thực nhận'])}</strong></div>`).join('<div class="my-2"></div>') : '<p>Chưa có dữ liệu lương.</p>';
+            document.getElementById('employee-detail-view').innerHTML = `<button onclick="switchView('employee-list-view')" class="mb-6 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">&larr; Quay lại</button><div class="bg-white rounded-xl shadow-lg p-8"><div class="mb-6"><div><h2 class="text-3xl font-bold">${employee['Họ và Tên']}</h2><p class="text-lg text-gray-600">${employee['Chức vụ']} - ${employee['Phòng ban']}</p></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-8"><div class="space-y-4"><h4 class="text-xl font-semibold">Lịch sử Lương</h4>${payrollsHtml}</div><div class="space-y-4"><h4 class="text-xl font-semibold">Phân tích AI</h4><div class="flex flex-col space-y-3"><button class="ai-action-button p-3 rounded-lg text-left" onclick="handleAIAction('analyze_salary', '${id}')">Phân tích và so sánh lương</button><button class="ai-action-button p-3 rounded-lg text-left" onclick="handleAIAction('estimate_pit', '${id}')">Ước tính thuế TNCN năm</button></div><div id="ai-output-employee" class="mt-4 p-4 bg-indigo-50 rounded-lg prose ai-output-container"><p class="text-gray-500">Chọn một hành động AI...</p></div></div></div></div>`;
+        }
+        
+        function renderTaxDetail(id) {
+            const tax = taxDeclarations.find(t => t['Mã Tờ khai'] === id);
+            document.getElementById('tax-detail-view').innerHTML = `<button onclick="switchView('tax-list-view')" class="mb-6 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">&larr; Quay lại</button><div class="bg-white rounded-xl shadow-lg p-8"><div class="flex justify-between items-start mb-6"><div><h2 class="text-3xl font-bold">${tax['Loại thuế']} - Kỳ ${tax['Kỳ kê khai']}</h2><p class="text-lg text-gray-600">Mã tờ khai: ${tax['Mã Tờ khai']}</p></div><span class="status-badge ${getStatusClass(tax['Trạng thái'])}">${tax['Trạng thái']}</span></div><div class="grid grid-cols-1 md:grid-cols-2 gap-8"><div class="space-y-4"><h4 class="text-xl font-semibold">Chi tiết tờ khai</h4><div class="bg-gray-50 p-4 rounded-lg"><strong>Hạn nộp:</strong> ${tax['Hạn nộp']}<br><strong>Số tiền phải nộp:</strong> ${formatCurrency(tax['Số tiền phải nộp'])}<br><strong>Đã nộp:</strong> ${formatCurrency(tax['Đã nộp'])}<br><strong>Còn lại:</strong> ${formatCurrency(parseFloat(tax['Số tiền phải nộp']) - parseFloat(tax['Đã nộp']))}</div></div><div class="space-y-4"><h4 class="text-xl font-semibold">Phân tích AI</h4><div class="flex flex-col space-y-3"><button class="ai-action-button p-3 rounded-lg text-left" onclick="handleAIAction('check_tax_data', '${id}')">Đối chiếu chéo với bảng lương</button><button class="ai-action-button p-3 rounded-lg text-left" onclick="handleAIAction('draft_reminder_tax', '${id}')">Soạn công văn/email nhắc nhở</button></div><div id="ai-output-tax" class="mt-4 p-4 bg-indigo-50 rounded-lg prose ai-output-container"><p class="text-gray-500">Chọn một hành động AI...</p></div></div></div></div>`;
+        }
+
+        // --- LOGIC AI ---
+        async function handleAIAction(action, primaryId) {
+            let prompt = '', data = {}, outputContainerId = '';
+            
+            switch(action) {
+                case 'analyze_salary': case 'estimate_pit': outputContainerId = 'ai-output-employee'; break;
+                case 'check_tax_data': case 'draft_reminder_tax': outputContainerId = 'ai-output-tax'; break;
+            }
+
+            const outputContainer = document.getElementById(outputContainerId);
+            if (!outputContainer) return;
+            outputContainer.innerHTML = `<div class="flex items-center text-gray-500"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>AI đang phân tích...</span></div>`;
+
+            data.employee = employees.find(e => e['Mã NV'] === primaryId);
+            data.payrolls = payrolls.filter(p => p['Mã NV'] === primaryId);
+            data.taxDeclaration = taxDeclarations.find(t => t['Mã Tờ khai'] === primaryId);
+
+            switch(action) {
+                case 'analyze_salary':
+                    prompt = `Phân tích và so sánh mức lương của nhân viên này so với trung bình phòng ban (nếu có thể) và đưa ra nhận xét về cơ cấu lương (tỷ lệ lương cơ bản, phụ cấp, thưởng).`;
+                    break;
+                case 'estimate_pit':
+                    prompt = `Dựa trên bảng lương gần nhất của nhân viên và số người phụ thuộc, hãy ước tính tổng thuế TNCN phải nộp cho cả năm và đưa ra lời khuyên (nếu có). Giả định thu nhập không đổi.`;
+                    break;
+                case 'check_tax_data':
+                    data.all_payrolls_in_period = payrolls.filter(p => p['Kỳ lương'] === data.taxDeclaration['Kỳ kê khai']);
+                    prompt = `Đối chiếu số liệu thuế TNCN trên tờ khai này với tổng số thuế TNCN đã khấu trừ trên tất cả bảng lương trong cùng kỳ. Đưa ra kết luận về sự khớp/lệch và cảnh báo nếu có.`;
+                    break;
+                case 'draft_reminder_tax':
+                    prompt = `Dựa vào trạng thái tờ khai thuế này, hãy soạn một email nhắc nhở nội bộ cho phòng kế toán về việc nộp thuế. Nếu đã quá hạn, giọng văn cần khẩn trương hơn.`;
+                    break;
+            }
+            try {
+                const response = await getAIResponse(prompt, data);
+                outputContainer.innerHTML = response.replace(/\n/g, '<br>');
+            } catch(e) { 
+                outputContainer.innerHTML = '<p class="text-red-500">Không thể nhận phản hồi từ AI. Vui lòng thử lại.</p>';
+            }
+        }
+
+        async function getAIResponse(userQuestion, dataContext) {
+            const fullPrompt = `${userQuestion}\n\nDữ liệu liên quan:\n${JSON.stringify(dataContext, null, 2)}`;
+            const payload = { contents: [{ role: "user", parts: [{ text: fullPrompt }] }] };
+            const apiKey = "AIzaSyDOYSA7urKkHiKfwsIRkYG4PXvQiTcxDH0";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+            const result = await response.json();
+            return result.candidates[0]?.content?.parts[0]?.text || "Không thể nhận phản hồi.";
+        }
+
+        // --- KHỞI TẠO ---
+        document.addEventListener('DOMContentLoaded', () => {
+            employees = parseCSV(employeesCSVData);
+            payrolls = parseCSV(payrollsCSVData);
+            taxDeclarations = parseCSV(taxDeclarationsCSVData);
+            
+            document.querySelectorAll('#nav-links .nav-link').forEach(link => {
+                link.addEventListener('click', () => switchView(link.dataset.view));
+            });
+            
+            switchView('dashboard-view');
+        });
+    </script>
+</body>
+</html>
